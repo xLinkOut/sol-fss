@@ -1,0 +1,16 @@
+# Configurazione File Storage Server
+
+# Numero di threads worker
+THREADS_WORKER=<int>
+
+# Dimensione massima dello Storage, in Mb
+STORAGE_MAX_CAPACITY=<int>
+# Numero massimo di file consentiti
+STORAGE_MAX_FILES=<int>
+# Politica di rimpiazzamento
+REPLACEMENT_POLICY=<fifo|lru|lfu>
+
+# Path al Socket file
+SOCKET_PATH=<path>
+# Path al Log file
+LOG_PATH=<path>

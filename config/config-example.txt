@@ -1,0 +1,16 @@
+# Configurazione File Storage Server
+
+# Numero di threads worker
+THREADS_WORKER=8
+
+# Dimensione massima dello Storage, in Mb
+STORAGE_MAX_CAPACITY=128
+# Numero massimo di file consentiti
+STORAGE_MAX_FILES=50
+# Politica di rimpiazzamento
+REPLACEMENT_POLICY=fifo
+
+# Path al Socket file
+SOCKET_PATH=./fss.sk
+# Path al Log file
+LOG_PATH=./fss.log
