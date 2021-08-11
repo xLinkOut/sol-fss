@@ -1,15 +1,65 @@
 // @author Luca Cirillo (545480)
 
 #include <errno.h>
+#include <pthread.h>
+#include <server_config.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <server_config.h>
+#include <unistd.h>
 
-#define BUFFER_SIZE 512  // TODO: spostare in un file di utilities
+// TODO: spostare in un file di utilities
+#define BUFFER_SIZE 512
 
-// Converte una stringa in un numero // TODO: spostare in un file di utilities
+// TODO: routine di cleanup per la chiusura su errore del server
+
+// TODO: spostare nel file di gestione dei segnali
+static void* signals_handler(void* sigset) {
+    int error;
+    int signal;
+    // Aspetto l'arrivo di un segnale tra SIGINT, SIGQUIT e SIGHUP
+    if ((error = sigwait((sigset_t*)sigset, &signal)) != 0) {
+        fprintf(stderr, "Error: something wrong append while waiting for signals!\n");
+        exit(error);
+    }
+
+    switch (signal) {
+        /* 
+            ! SIGINT, SIGQUIT: il server termina il prima possibile:
+                non accetta nuove richieste da parte dei client connessi
+                né da nuovi client, chiude quindi tutte le connessioni attive
+                ma stampa comunque il sunto delle statistiche.
+            * SIGINT e SIGQUIT vengono di fatto gestiti nello stesso modo.
+        */
+        case SIGINT:
+        case SIGQUIT:
+            // TODO: gestione
+            printf("SIGINT | SIGQUIT\n");
+            break;
+
+        /*
+            ! SIGHUP: il server completa le richieste, quindi termina:
+                non accetta nuove richieste da parte di nuovi client
+                ma vengono comunque servite tutte le richieste dei client connessi 
+                al momento della ricezione del segnale.
+                Il server terminerà solo quando tutti i client connessi  chiuderanno la connessione.
+        */
+        case SIGHUP:
+            // TODO: gestione
+            printf("SIGHUP\n");
+            break;
+
+        default:
+            break;
+    }
+
+    return NULL;
+}
+
+// TODO: spostare in un file di utilities
+// Converte una stringa in un numero
 int is_number(const char* arg, long* num) {
     char* string = NULL;
     long value = strtol(arg, &string, 10);
@@ -77,11 +127,11 @@ int main(int argc, char* argv[]) {
     while (fgets(buffer, BUFFER_SIZE, config_file)) {
         // Salto righe vuote e righe commentate, che iniziano con #
         if (buffer[0] && (buffer[0] == '\n' || buffer[0] == '#')) continue;
-        
+
         // Parso la coppia key -> value, con il delimitatore '='
         key = strtok_r(buffer, "=", &strtok_status);
         value = NULL;
-        
+
         if (key) {
             // Parso la coppia key -> value, con il delimitatore '='
             value = strtok_r(NULL, "=", &strtok_status);
@@ -125,7 +175,7 @@ int main(int argc, char* argv[]) {
                     fprintf(stderr, "Error: %s has an invalid value", key);
                     return EINVAL;
                 }
-            
+
             // * SOCKET_PATH
             } else if (strcmp(key, "SOCKET_PATH") == 0) {
                 if ((SOCKET_PATH = (char*)malloc(sizeof(char) * strlen(value) + 1)) == NULL) {
@@ -155,18 +205,62 @@ int main(int argc, char* argv[]) {
 
 #ifdef DEBUG
     // Sommario di debug
-    printf("Debug: configuration summary:\n"
-        "- STORAGE_MAX_CAPACITY:\t%ld\n"
-        "- STORAGE_MAX_FILES:\t%ld\n"
-        "- REPLACEMENT_POLICY:\t%d\n"
-        "- THREADS_WORKER:\t%ld\n"
-        "- SOCKET_PATH:\t%s\n"
-        "- LOG_PATH:\t%s\n",
+    printf(
+        "Debug: configuration summary:\n"
+        "\t+ STORAGE_MAX_CAPACITY:\t%ld\n"
+        "\t+ STORAGE_MAX_FILES:\t%ld\n"
+        "\t+ REPLACEMENT_POLICY:\t%d\n"
+        "\t+ THREADS_WORKER:\t%ld\n"
+        "\t+ SOCKET_PATH:\t%s\n"
+        "\t+ LOG_PATH:\t%s\n",
         STORAGE_MAX_CAPACITY, STORAGE_MAX_FILES, REPLACEMENT_POLICY,
         THREADS_WORKER, SOCKET_PATH, LOG_PATH);
 #endif
 
+    // ! SEGNALI
+    // Segnali da mascherare durante l'esecuzione dell'handler
+    sigset_t sigset;
+    // Inizializza la maschera; operazione richiesta per usare sigaddset
+    sigemptyset(&sigset);
+    // Aggiungo SIGINT
+    sigaddset(&sigset, SIGINT);
+    // Aggiungo SIGQUIT
+    sigaddset(&sigset, SIGQUIT);
+    // Aggiungo SIGHUP
+    sigaddset(&sigset, SIGHUP);
+
+    // Preparo la struttura da passare alla system call sigaction
+    struct sigaction sig_action;
+    // Inizializzo la struttura
+    memset(&sig_action, 0, sizeof(sig_action));
+    // Imposto l'handler su SIG_IGN, per ignorare l'arrivo dei segnali
+    sig_action.sa_handler = SIG_IGN;
+    // Imposto la maschera dei segnali creata precedentemente, per mascherare l'arrivo
+    // di SIGINT, SIGQUIT e SIGHUP durante la gestione di altri segnali
+    sig_action.sa_mask = sigset;
+    // Ignoro il segnale SIGPIPE, per prevenire crash del server
+    // in caso di disconnessione da parte dei clients sul socket
+    if (sigaction(SIGPIPE, &sig_action, NULL) != 0) {
+        perror("Error: failed to install signal handler for SIGPIPE with sigaction");
+        return errno;
+    }
+
+    // Per la gestione di tutti gli altri segnali indicati in sigset, utilizzo un thread specializzato
+    if (pthread_sigmask(SIG_BLOCK, &sigset, NULL) != 0) {
+        perror("Error: failed to set signal mask for signals handler thread");
+        return errno;
+    }
+    // Eseguo il therad specializzato nella gestione dei segnali
+    pthread_t thread_signal_handler;
+    if (pthread_create(&thread_signal_handler, NULL, &signals_handler, (void*)&sigset) != 0) {
+        perror("Error: failed to launch signals handler thread");
+        return errno;
+    }
+
     // ! EXIT
+    // Mi assicuro che tutti i threads spawnati siano terminati
+    //pthread_join(thread_signal_handler, NULL);
+
     // Libero la memoria prima di uscire
     free(CONFIG_PATH);
     free(SOCKET_PATH);
