@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -262,6 +263,8 @@ int main(int argc, char* argv[]) {
 
     // ! CONNESSIONE
     struct sockaddr_un socket_address;
+    // Inizializzo la struttura
+    memset(&socket_address, '0', sizeof(socket_address));
     socket_address.sun_family = AF_UNIX;
     // Imposto come path quello del socket preso dal file di configurazione
     // ? Come validare SOCKET_PATH?
@@ -288,7 +291,52 @@ int main(int argc, char* argv[]) {
         return errno;
     }
 
-    // int client_socket = accept(server_socket,NULL,0);
+    // ! PREPARAZIONE SELECT
+    // Insieme dei file descriptor attivi
+    fd_set set;
+    // Insieme dei file descriptor pronti in lettura
+    fd_set ready_set;
+    // Mantengo il massimo indice di descrittore attivo,
+    // inizialmente pari allo stesso server socket
+    int fd_num = server_socket;
+    // Inizializzo la maschera
+    FD_ZERO(&set);
+    // Aggiungo il descrittore del socket server
+    FD_SET(server_socket, &set);
+
+    // Descrittore del socket client
+    int client_socket;
+
+    // ! MAIN LOOP
+    // TODO: porre nella guardia del while le condizioni di terminazione che arrivano dal signals handler
+    while (1) {
+        // Reimposto la l'insieme dei descrittori su quello iniziale,
+        // in quanto la select lo modifica ad ogni iterazione
+        ready_set = set;
+
+        // ! SELECT
+        // TODO: aggiungere il timeout
+        if (select(fd_num + 1, &ready_set, NULL, NULL, NULL) == -1) {
+            // TODO: gestione errori
+            continue;
+        }
+
+        // Itero sui selettori per processare tutti quelli pronti
+        // Il massimo numero di descrittori è indicato da fd_num
+        for (int fd = 0; fd < fd_num + 1; fd++) {
+            if (FD_ISSET(fd, &ready_set)) {  // fd è pronto?
+                if (fd == server_socket) {   // Il server socket è pronto
+                    // Accetto la connessione in entrata
+                    client_socket = accept(server_socket, NULL, 0);
+                    // Aggiungo il nuovo descrittore nella maschera di partenza
+                    FD_SET(client_socket, &set);
+                    // Aggiorno il contatore del massimo indice
+                    if (client_socket > fd_num) fd_num = client_socket;
+                    printf("Info: accepted incoming connection on %d\n", client_socket);
+                }
+            }
+        }
+    }
 
     // ! EXIT
     // Mi assicuro che tutti i threads spawnati siano terminati
