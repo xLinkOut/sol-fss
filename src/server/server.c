@@ -7,11 +7,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 // TODO: spostare in un file di utilities
 #define BUFFER_SIZE 512
+
+#define CONCURRENT_CONNECTIONS 8
 
 // TODO: routine di cleanup per la chiusura su errore del server
 
@@ -147,7 +150,7 @@ int main(int argc, char* argv[]) {
                 }
                 THREADS_WORKER = (size_t)numeric_value;
 
-            // * STORAGE_MAX_CAPACITY
+                // * STORAGE_MAX_CAPACITY
             } else if (strcmp(key, "STORAGE_MAX_CAPACITY") == 0) {
                 if (is_number(value, &numeric_value) == 0 || numeric_value < 0) {
                     fprintf(stderr, "Error: %s has an invalid value (%s)", key, value);
@@ -155,7 +158,7 @@ int main(int argc, char* argv[]) {
                 }
                 STORAGE_MAX_CAPACITY = (size_t)numeric_value;
 
-            // * STORAGE_MAX_FILES
+                // * STORAGE_MAX_FILES
             } else if (strcmp(key, "STORAGE_MAX_FILES") == 0 || numeric_value < 0) {
                 if (is_number(value, &numeric_value) == 0) {
                     fprintf(stderr, "Error: %s has an invalid value", key);
@@ -163,7 +166,7 @@ int main(int argc, char* argv[]) {
                 }
                 STORAGE_MAX_FILES = (size_t)numeric_value;
 
-            // * REPLACEMENT_POLICY
+                // * REPLACEMENT_POLICY
             } else if (strcmp(key, "REPLACEMENT_POLICY") == 0) {
                 if (strcmp(value, "fifo") == 0)
                     REPLACEMENT_POLICY = FIFO;
@@ -176,7 +179,7 @@ int main(int argc, char* argv[]) {
                     return EINVAL;
                 }
 
-            // * SOCKET_PATH
+                // * SOCKET_PATH
             } else if (strcmp(key, "SOCKET_PATH") == 0) {
                 if ((SOCKET_PATH = (char*)malloc(sizeof(char) * strlen(value) + 1)) == NULL) {
                     perror("Error: unable to allocate memory using malloc for SOCKET_PATH");
@@ -184,7 +187,7 @@ int main(int argc, char* argv[]) {
                 }
                 strncpy(SOCKET_PATH, value, strlen(value) + 1);
 
-            // * LOG_PATH
+                // * LOG_PATH
             } else if (strcmp(key, "LOG_PATH") == 0) {
                 if ((LOG_PATH = (char*)malloc(sizeof(char) * strlen(value) + 1)) == NULL) {
                     perror("Error: unable to allocate memory using malloc for LOG_PATH");
@@ -257,6 +260,36 @@ int main(int argc, char* argv[]) {
         return errno;
     }
 
+    // ! CONNESSIONE
+    struct sockaddr_un socket_address;
+    socket_address.sun_family = AF_UNIX;
+    // Imposto come path quello del socket preso dal file di configurazione
+    // ? Come validare SOCKET_PATH?
+    // TODO: controllo sull'esistenza del file?
+    // TODO: cambiare in strncpy
+    strcpy(socket_address.sun_path, SOCKET_PATH);
+
+    // Creo il socket lato server, che accetterà nuove connessioni
+    int server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (server_socket == -1) {
+        perror("Error: failed to create server socket");
+        return errno;
+    }
+
+    // Eseguo la bind sul socket appena creato
+    if (bind(server_socket, (struct sockaddr*)&socket_address, sizeof(socket_address)) == -1) {
+        perror("Error: failed to bind server socket");
+        return errno;
+    }
+
+    // Quindi imposto la modalità passiva, ponendolo in ascolto
+    if (listen(server_socket, CONCURRENT_CONNECTIONS) == -1) {
+        perror("Error: failed to put server socket in listen mode");
+        return errno;
+    }
+
+    // int client_socket = accept(server_socket,NULL,0);
+
     // ! EXIT
     // Mi assicuro che tutti i threads spawnati siano terminati
     //pthread_join(thread_signal_handler, NULL);
@@ -265,6 +298,9 @@ int main(int argc, char* argv[]) {
     free(CONFIG_PATH);
     free(SOCKET_PATH);
     free(LOG_PATH);
+
+    // Elimino il socket file
+    unlink(SOCKET_PATH);
 
     return EXIT_SUCCESS;
 }
