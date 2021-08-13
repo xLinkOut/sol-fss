@@ -20,6 +20,8 @@
 // TODO: routine di cleanup per la chiusura su errore del server
 
 // TODO: spostare nel file di gestione dei segnali
+sig_atomic_t stop = 0; // SIGHUP
+sig_atomic_t force_stop = 0; // SIGINT e SIGQUIT
 static void* signals_handler(void* sigset) {
     int error;
     int signal;
@@ -39,8 +41,8 @@ static void* signals_handler(void* sigset) {
         */
         case SIGINT:
         case SIGQUIT:
-            // TODO: gestione
-            printf("SIGINT | SIGQUIT\n");
+            force_stop = 1;
+            printf("Info: SIGINT or SIGQUIT received\n");
             break;
 
         /*
@@ -51,8 +53,8 @@ static void* signals_handler(void* sigset) {
                 Il server terminerà solo quando tutti i client connessi  chiuderanno la connessione.
         */
         case SIGHUP:
-            // TODO: gestione
-            printf("SIGHUP\n");
+            stop = 1;
+            printf("Info: SIGHUP received\n");
             break;
 
         default:
@@ -307,10 +309,15 @@ int main(int argc, char* argv[]) {
     // Descrittore del socket client
     int client_socket;
 
+    // Conteggio dei clients attivi, per gestire la terminazione "soft" del segnale SIGHUP
+    int active_clients = 0;
+
     // ! MAIN LOOP
-    // TODO: porre nella guardia del while le condizioni di terminazione che arrivano dal signals handler
-    while (1) {
-        // Reimposto la l'insieme dei descrittori su quello iniziale,
+    // Rimango attivo finchè arriva un segnale di SIGINT|SIGQUIT (force_stop)
+    // oppure arriva un segnale di SIGHUP e non ci sono più client connessi
+    // * Termino quando: force_stop OR (stop AND active_clients == 0)
+    while (!(force_stop || (stop && (active_clients == 0)))) {
+        // Reimposto l'insieme dei descrittori su quello iniziale,
         // in quanto la select lo modifica ad ogni iterazione
         ready_set = set;
 
@@ -325,13 +332,15 @@ int main(int argc, char* argv[]) {
         // Il massimo numero di descrittori è indicato da fd_num
         for (int fd = 0; fd < fd_num + 1; fd++) {
             if (FD_ISSET(fd, &ready_set)) {  // fd è pronto?
-                if (fd == server_socket) {   // Il server socket è pronto
+                if (fd == server_socket && !stop) { // Il server socket è pronto E non è arrivato SIGHUP
                     // Accetto la connessione in entrata
                     client_socket = accept(server_socket, NULL, 0);
                     // Aggiungo il nuovo descrittore nella maschera di partenza
                     FD_SET(client_socket, &set);
                     // Aggiorno il contatore del massimo indice
                     if (client_socket > fd_num) fd_num = client_socket;
+                    // Aggiorno il contatore dei clients attivi
+                    active_clients++;
                     printf("Info: accepted incoming connection on %d\n", client_socket);
                 }
             }
