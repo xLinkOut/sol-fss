@@ -17,11 +17,9 @@
 
 #define CONCURRENT_CONNECTIONS 8
 
-// TODO: routine di cleanup per la chiusura su errore del server
-
 // TODO: spostare nel file di gestione dei segnali
-sig_atomic_t stop = 0; // SIGHUP
-sig_atomic_t force_stop = 0; // SIGINT e SIGQUIT
+sig_atomic_t stop = 0;        // SIGHUP
+sig_atomic_t force_stop = 0;  // SIGINT e SIGQUIT
 static void* signals_handler(void* sigset) {
     int error;
     int signal;
@@ -64,6 +62,12 @@ static void* signals_handler(void* sigset) {
     return NULL;
 }
 
+// TODO: spostare in un file per i workers
+static void* worker() {
+    sleep(10);
+    return NULL;
+}
+
 // TODO: spostare in un file di utilities
 // Converte una stringa in un numero
 int is_number(const char* arg, long* num) {
@@ -83,6 +87,7 @@ int is_number(const char* arg, long* num) {
     return 0;
 }
 
+// TODO: routine di cleanup per la chiusura su errore del server
 int main(int argc, char* argv[]) {
     // ! Parametri in ingresso:
     //  * 1. <config_path>: path al file di configurazione 'config.txt'
@@ -252,7 +257,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Per la gestione di tutti gli altri segnali indicati in sigset, utilizzo un thread specializzato
-    if (pthread_sigmask(SIG_BLOCK, &sigset, NULL) != 0) {
+    if (pthread_sigmask(SIG_BLOCK, &sigset, NULL) != 0) {  // ? Oppure SIG_SETMASK?
         perror("Error: failed to set signal mask for signals handler thread");
         return errno;
     }
@@ -262,6 +267,8 @@ int main(int argc, char* argv[]) {
         perror("Error: failed to launch signals handler thread");
         return errno;
     }
+
+    printf("Info: started signals handler thread");
 
     // ! CONNESSIONE
     struct sockaddr_un socket_address;
@@ -292,6 +299,25 @@ int main(int argc, char* argv[]) {
         perror("Error: failed to put server socket in listen mode");
         return errno;
     }
+
+    // ! THREAD POOL
+    // Creo la thread pool
+    pthread_t* thread_pool;
+    if ((thread_pool = (pthread_t*)malloc(sizeof(pthread_t) * THREADS_WORKER)) == NULL) {
+        perror("Error: failed to allocate memory for thread pool");
+        return errno;
+    }
+
+    // Inizializzo e lancio i threads worker
+    for (int i = 0; i < THREADS_WORKER; i++) {
+        if (pthread_create(&thread_pool[i], NULL, &worker, NULL) != 0) {
+            fprintf(stderr, "Error: failed to start worker thread (%d)\n", i);
+            return EXIT_FAILURE;
+        }
+        printf("Info: worker thread (%d) started\n", i);
+    }
+
+    printf("Info: thread pool initialized\n");
 
     // ! PREPARAZIONE SELECT
     // Insieme dei file descriptor attivi
@@ -331,8 +357,8 @@ int main(int argc, char* argv[]) {
         // Itero sui selettori per processare tutti quelli pronti
         // Il massimo numero di descrittori è indicato da fd_num
         for (int fd = 0; fd < fd_num + 1; fd++) {
-            if (FD_ISSET(fd, &ready_set)) {  // fd è pronto?
-                if (fd == server_socket && !stop) { // Il server socket è pronto E non è arrivato SIGHUP
+            if (FD_ISSET(fd, &ready_set)) {          // fd è pronto?
+                if (fd == server_socket && !stop) {  // Il server socket è pronto && non è arrivato SIGHUP
                     // Accetto la connessione in entrata
                     client_socket = accept(server_socket, NULL, 0);
                     // Aggiungo il nuovo descrittore nella maschera di partenza
@@ -350,6 +376,7 @@ int main(int argc, char* argv[]) {
     // ! EXIT
     // Mi assicuro che tutti i threads spawnati siano terminati
     //pthread_join(thread_signal_handler, NULL);
+    free(thread_pool);
 
     // Libero la memoria prima di uscire
     free(CONFIG_PATH);
@@ -358,6 +385,10 @@ int main(int argc, char* argv[]) {
 
     // Elimino il socket file
     unlink(SOCKET_PATH);
+
+    // Chiudo i socket
+    close(server_socket);
+    close(client_socket);
 
     return EXIT_SUCCESS;
 }
