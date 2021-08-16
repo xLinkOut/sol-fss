@@ -130,10 +130,10 @@ int main(int argc, char* argv[]) {
     // Parso il file di configurazione, una riga per volta
     char* key;
     char* value;
+    int value_length;
     char* strtok_status;
     long numeric_value = -1;
     char buffer[BUFFER_SIZE];
-
     // Leggo una riga dal file
     while (fgets(buffer, BUFFER_SIZE, config_file)) {
         // Salto righe vuote e righe commentate, che iniziano con #
@@ -146,9 +146,11 @@ int main(int argc, char* argv[]) {
         if (key) {
             // Parso la coppia key -> value, con il delimitatore '='
             value = strtok_r(NULL, "=", &strtok_status);
-
-            // Aggiungo il terminatore alla fine della stringa
-            value[strlen(value) - 1] = '\0';
+            value_length = strlen(value);
+            // Aggiungo il terminatore alla fine della stringa,
+            // considerando anche il caso in cui non sia presente
+            // una riga vuota alla fine del file di configurazione
+            if (value[value_length - 1] == '\n') value[value_length - 1] = '\0';
 
             // * THREADS_WORKER
             if (strcmp(key, "THREADS_WORKER") == 0) {
@@ -189,19 +191,19 @@ int main(int argc, char* argv[]) {
 
                 // * SOCKET_PATH
             } else if (strcmp(key, "SOCKET_PATH") == 0) {
-                if ((SOCKET_PATH = (char*)malloc(sizeof(char) * strlen(value) + 1)) == NULL) {
+                if ((SOCKET_PATH = (char*)malloc(sizeof(char) * value_length + 1)) == NULL) {
                     perror("Error: unable to allocate memory using malloc for SOCKET_PATH");
                     return errno;
                 }
-                strncpy(SOCKET_PATH, value, strlen(value) + 1);
+                strncpy(SOCKET_PATH, value, value_length + 1);
 
                 // * LOG_PATH
             } else if (strcmp(key, "LOG_PATH") == 0) {
-                if ((LOG_PATH = (char*)malloc(sizeof(char) * strlen(value) + 1)) == NULL) {
+                if ((LOG_PATH = (char*)malloc(sizeof(char) * value_length + 1)) == NULL) {
                     perror("Error: unable to allocate memory using malloc for LOG_PATH");
                     return errno;
                 }
-                strncpy(LOG_PATH, value, strlen(value) + 1);
+                strncpy(LOG_PATH, value, value_length + 1);
             }
         }
     }
@@ -268,7 +270,7 @@ int main(int argc, char* argv[]) {
         return errno;
     }
 
-    printf("Info: started signals handler thread");
+    printf("Info: started signals handler thread\n");
 
     // ! CONNESSIONE
     struct sockaddr_un socket_address;
