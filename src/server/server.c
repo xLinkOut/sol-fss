@@ -1,5 +1,7 @@
 // @author Luca Cirillo (545480)
 
+#define _POSIX_C_SOURCE 199309L // Sigaction
+
 #include <errno.h>
 #include <pthread.h>
 #include <server_config.h>
