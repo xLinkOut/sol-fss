@@ -12,10 +12,17 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+// TODO: liberare la memoria prima di uscire in caso di errore
+
 // TODO: spostare in un file di utilities
 #define BUFFER_SIZE 512
 
 #define CONCURRENT_CONNECTIONS 8
+
+// Struttura dati per passare più argomenti ai threads worker
+struct worker_args {
+    int pipe_output;
+};
 
 // TODO: spostare nel file di gestione dei segnali
 sig_atomic_t stop = 0;        // SIGHUP
@@ -63,8 +70,8 @@ static void* signals_handler(void* sigset) {
 }
 
 // TODO: spostare in un file per i workers
-static void* worker() {
-    sleep(10);
+static void* worker(void* args) {
+    struct worker_args* worker_args = (struct worker_args*) args;
     return NULL;
 }
 
@@ -302,6 +309,13 @@ int main(int argc, char* argv[]) {
         return errno;
     }
 
+    // ! PIPE
+    int pipe_workers[2];  // [0]: lettura, [1]: scrittura
+    if (pipe(pipe_workers) == -1) {
+        perror("Error: failed to create pipe");
+        return errno;
+    }
+
     // ! THREAD POOL
     // Creo la thread pool
     pthread_t* thread_pool;
@@ -310,9 +324,13 @@ int main(int argc, char* argv[]) {
         return errno;
     }
 
+    // Parametri dei threads worker
+    struct worker_args* worker_args = (struct worker_args*)malloc(sizeof(struct worker_args));
+    worker_args->pipe_output = pipe_workers[1];
+
     // Inizializzo e lancio i threads worker
     for (int i = 0; i < THREADS_WORKER; i++) {
-        if (pthread_create(&thread_pool[i], NULL, &worker, NULL) != 0) {
+        if (pthread_create(&thread_pool[i], NULL, &worker, (void*)worker_args) != 0) {
             fprintf(stderr, "Error: failed to start worker thread (%d)\n", i);
             return EXIT_FAILURE;
         }
@@ -340,7 +358,7 @@ int main(int argc, char* argv[]) {
     // Conteggio dei clients attivi, per gestire la terminazione "soft" del segnale SIGHUP
     int active_clients = 0;
 
-    // ! MAIN LOOP
+    // ! MAIN LOOP (DISPATCHER)
     // Rimango attivo finchè arriva un segnale di SIGINT|SIGQUIT (force_stop)
     // oppure arriva un segnale di SIGHUP e non ci sono più client connessi
     // * Termino quando: force_stop OR (stop AND active_clients == 0)
