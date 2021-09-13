@@ -1,6 +1,6 @@
 // @author Luca Cirillo (545480)
 
-#define _POSIX_C_SOURCE 199309L // Sigaction
+//#define _POSIX_C_SOURCE 199309L // Sigaction
 
 #include <errno.h>
 #include <pthread.h>
@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -73,7 +74,7 @@ static void* signals_handler(void* sigset) {
 
 // TODO: spostare in un file per i workers
 static void* worker(void* args) {
-    struct worker_args* worker_args = (struct worker_args*) args;
+    struct worker_args* worker_args = (struct worker_args*)args;
     return NULL;
 }
 
@@ -360,6 +361,11 @@ int main(int argc, char* argv[]) {
     // Conteggio dei clients attivi, per gestire la terminazione "soft" del segnale SIGHUP
     int active_clients = 0;
 
+    // Timeout di 100ms, dopo il quale uscire dalla select
+    struct timeval timeout = {0, 100000};
+    // Copia del timeout, che viene modificato dalla select ad ogni iterazione
+    struct timeval current_timeout;
+
     // ! MAIN LOOP (DISPATCHER)
     // Rimango attivo finchè arriva un segnale di SIGINT|SIGQUIT (force_stop)
     // oppure arriva un segnale di SIGHUP e non ci sono più client connessi
@@ -368,10 +374,11 @@ int main(int argc, char* argv[]) {
         // Reimposto l'insieme dei descrittori su quello iniziale,
         // in quanto la select lo modifica ad ogni iterazione
         ready_set = set;
+        // Faccio lo stesso con il timeout
+        current_timeout = timeout;
 
         // ! SELECT
-        // TODO: aggiungere il timeout
-        if (select(fd_num + 1, &ready_set, NULL, NULL, NULL) == -1) {
+        if (select(fd_num + 1, &ready_set, NULL, NULL, &current_timeout) == -1) {
             // TODO: gestione errori
             continue;
         }
