@@ -387,9 +387,15 @@ int main(int argc, char* argv[]) {
         // Il massimo numero di descrittori è indicato da fd_num
         for (int fd = 0; fd < fd_num + 1; fd++) {
             if (FD_ISSET(fd, &ready_set)) {          // fd è pronto?
+
+                // * Nuovo connessione in entrata
                 if (fd == server_socket && !stop) {  // Il server socket è pronto && non è arrivato SIGHUP
-                    // Accetto la connessione in entrata
-                    client_socket = accept(server_socket, NULL, 0);
+                    // Accetto la connessione in entrata e controllo eventuali errori
+                    if((client_socket = accept(server_socket, NULL, 0)) == -1){
+                        // TODO: cleanup prima di uscire
+                        perror("Error: failed to accept an incoming connection");
+                        return errno;
+                    }
                     // Aggiungo il nuovo descrittore nella maschera di partenza
                     FD_SET(client_socket, &set);
                     // Aggiorno il contatore del massimo indice
