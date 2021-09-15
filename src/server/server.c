@@ -97,6 +97,21 @@ int is_number(const char* arg, long* num) {
     return 0;
 }
 
+// File di log
+FILE* log_file = NULL;
+
+// Logga su file un particolare evento, con un certo livello di importanza
+// 'level' si suppone sia uno tra INFO, DEBUG, WARN, ERROR
+// TODO: spostare in un altro file
+void log_event(const char* level, const char* message){
+    time_t timer = time(NULL);
+    struct tm* tm_info = localtime(&timer);
+    char date_time[20];
+    strftime(date_time, sizeof(date_time), "%Y-%m-%d %H:%M:%S", tm_info);
+    fprintf(log_file, "%s | %s\t| %s\n", date_time, level, message);
+}
+
+
 // TODO: routine di cleanup per la chiusura su errore del server
 int main(int argc, char* argv[]) {
     // ! Parametri in ingresso:
@@ -239,6 +254,17 @@ int main(int argc, char* argv[]) {
         STORAGE_MAX_CAPACITY, STORAGE_MAX_FILES, REPLACEMENT_POLICY,
         THREADS_WORKER, SOCKET_PATH, LOG_PATH);
 #endif
+
+    // ! LOG FILE
+    // TODO: Sovrascrivere un log esistente o appenderci il contenuto alla fine?
+    if ((log_file = fopen(LOG_PATH, "w")) == NULL) {
+        perror("Error: failed to open log file");
+        return errno;
+    }
+
+    // Log di avvio del
+    log_event("INFO", " == Server bootstrap == ");
+
 
     // ! SEGNALI
     // Segnali da mascherare durante l'esecuzione dell'handler
@@ -425,6 +451,15 @@ int main(int argc, char* argv[]) {
     // Chiudo i socket
     close(server_socket);
     close(client_socket);
+
+    // Log di chiusura
+    log_event("INFO", " == Server shutdown == ");
+
+    // Chiudo il file di log
+    if (fclose(log_file) != 0) {
+        perror("Error: failed to close log file");
+        return errno;
+    }
 
     return EXIT_SUCCESS;
 }
