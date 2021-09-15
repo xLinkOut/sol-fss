@@ -35,7 +35,7 @@ static void* signals_handler(void* sigset) {
     int signal;
     // Aspetto l'arrivo di un segnale tra SIGINT, SIGQUIT e SIGHUP
     if ((error = sigwait((sigset_t*)sigset, &signal)) != 0) {
-        fprintf(stderr, "Error: something wrong append while waiting for signals!\n");
+        fprintf(stderr, "Error: something wrong happened while waiting for signals!\n");
         exit(error);
     }
 
@@ -58,7 +58,7 @@ static void* signals_handler(void* sigset) {
                 non accetta nuove richieste da parte di nuovi client
                 ma vengono comunque servite tutte le richieste dei client connessi 
                 al momento della ricezione del segnale.
-                Il server terminerà solo quando tutti i client connessi  chiuderanno la connessione.
+                Il server terminerà solo quando tutti i client connessi chiuderanno la connessione.
         */
         case SIGHUP:
             stop = 1;
@@ -100,9 +100,9 @@ int is_number(const char* arg, long* num) {
 // TODO: routine di cleanup per la chiusura su errore del server
 int main(int argc, char* argv[]) {
     // ! Parametri in ingresso:
-    //  * 1. <config_path>: path al file di configurazione 'config.txt'
+    //  * 1. <config_path>: path al file di configurazione
     //    Se non viene specificato, si assume che il file di configurazione
-    //    sia presente nella directory corrente
+    //    sia presente nella directory corrente con il nome 'config.txt'
 
     if (argc == 1) {
         // * <config_path> non specificato
@@ -162,32 +162,32 @@ int main(int argc, char* argv[]) {
             // una riga vuota alla fine del file di configurazione
             if (value[value_length - 1] == '\n') value[value_length - 1] = '\0';
 
-            // * THREADS_WORKER
             if (strcmp(key, "THREADS_WORKER") == 0) {
+                // * THREADS_WORKER
                 if (is_number(value, &numeric_value) == 0 || numeric_value <= 0) {
                     fprintf(stderr, "Error: %s has an invalid value", key);
                     return EINVAL;
                 }
                 THREADS_WORKER = (size_t)numeric_value;
 
-                // * STORAGE_MAX_CAPACITY
             } else if (strcmp(key, "STORAGE_MAX_CAPACITY") == 0) {
-                if (is_number(value, &numeric_value) == 0 || numeric_value < 0) {
+                // * STORAGE_MAX_CAPACITY
+                if (is_number(value, &numeric_value) == 0 || numeric_value <= 0) {
                     fprintf(stderr, "Error: %s has an invalid value (%s)", key, value);
                     return EINVAL;
                 }
                 STORAGE_MAX_CAPACITY = (size_t)numeric_value;
 
+            } else if (strcmp(key, "STORAGE_MAX_FILES") == 0 || numeric_value <= 0) {
                 // * STORAGE_MAX_FILES
-            } else if (strcmp(key, "STORAGE_MAX_FILES") == 0 || numeric_value < 0) {
                 if (is_number(value, &numeric_value) == 0) {
                     fprintf(stderr, "Error: %s has an invalid value", key);
                     return EINVAL;
                 }
                 STORAGE_MAX_FILES = (size_t)numeric_value;
 
-                // * REPLACEMENT_POLICY
             } else if (strcmp(key, "REPLACEMENT_POLICY") == 0) {
+                // * REPLACEMENT_POLICY
                 if (strcmp(value, "fifo") == 0)
                     REPLACEMENT_POLICY = FIFO;
                 else if (strcmp(value, "lru") == 0)
@@ -199,16 +199,16 @@ int main(int argc, char* argv[]) {
                     return EINVAL;
                 }
 
-                // * SOCKET_PATH
             } else if (strcmp(key, "SOCKET_PATH") == 0) {
+                // * SOCKET_PATH
                 if ((SOCKET_PATH = (char*)malloc(sizeof(char) * value_length + 1)) == NULL) {
                     perror("Error: unable to allocate memory using malloc for SOCKET_PATH");
                     return errno;
                 }
                 strncpy(SOCKET_PATH, value, value_length + 1);
 
-                // * LOG_PATH
             } else if (strcmp(key, "LOG_PATH") == 0) {
+                // * LOG_PATH
                 if ((LOG_PATH = (char*)malloc(sizeof(char) * value_length + 1)) == NULL) {
                     perror("Error: unable to allocate memory using malloc for LOG_PATH");
                     return errno;
@@ -386,10 +386,11 @@ int main(int argc, char* argv[]) {
         // Itero sui selettori per processare tutti quelli pronti
         // Il massimo numero di descrittori è indicato da fd_num
         for (int fd = 0; fd < fd_num + 1; fd++) {
-            if (FD_ISSET(fd, &ready_set)) {          // fd è pronto?
-
-                // * Nuovo connessione in entrata
-                if (fd == server_socket && !stop) {  // Il server socket è pronto && non è arrivato SIGHUP
+            // fd è pronto?
+            if (FD_ISSET(fd, &ready_set)) {
+                // Il server socket è pronto && non è arrivato SIGHUP
+                if (fd == server_socket && !stop) {
+                    // * Nuovo connessione in entrata
                     // Accetto la connessione in entrata e controllo eventuali errori
                     if((client_socket = accept(server_socket, NULL, 0)) == -1){
                         // TODO: cleanup prima di uscire
