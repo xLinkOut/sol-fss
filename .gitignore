@@ -2,6 +2,8 @@
 .vscode/
 
 # Files
+# Log files
+*.log
 
 # macOS
 .DS_Store
