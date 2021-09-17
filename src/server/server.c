@@ -20,7 +20,7 @@
 
 // TODO: spostare in un file di utilities
 #define BUFFER_SIZE 512
-
+#define UNIX_PATH_MAX 108
 #define CONCURRENT_CONNECTIONS 8
 
 // Struttura dati per passare più argomenti ai threads worker
@@ -154,12 +154,20 @@ int main(int argc, char* argv[]) {
     }
 
     // ! CONFIGURAZIONE
+    // Controllo se il file di configurazione esiste
+    // e se dispongo dei diritti necessari per poterlo leggere
+    if(access(CONFIG_PATH, R_OK) == -1){
+        // File non esistente oppure permessi non sufficienti
+        fprintf(stderr, "Error: %s does not exist or permissions are insufficient to read the file\n", CONFIG_PATH);
+        return EINVAL;
+    }
+
     // Parso il file di configurazione e carico i parametri in memoria
     printf("Info: loading configuration...\n");
 
     FILE* config_file = NULL;
     if ((config_file = fopen(CONFIG_PATH, "r")) == NULL) {
-        perror("Error: failed to load configuration");
+        perror("Error: failed to load configuration file");
         return errno;
     }
 
@@ -182,7 +190,7 @@ int main(int argc, char* argv[]) {
         if (key) {
             // Parso la coppia key -> value, con il delimitatore '='
             value = strtok_r(NULL, "=", &strtok_status);
-            value_length = strlen(value);
+            value_length = strlen(value); // Include il terminatore nel conteggio
             // Aggiungo il terminatore alla fine della stringa,
             // considerando anche il caso in cui non sia presente
             // una riga vuota alla fine del file di configurazione
@@ -191,7 +199,7 @@ int main(int argc, char* argv[]) {
             if (strcmp(key, "THREADS_WORKER") == 0) {
                 // * THREADS_WORKER
                 if (is_number(value, &numeric_value) == 0 || numeric_value <= 0) {
-                    fprintf(stderr, "Error: %s has an invalid value", key);
+                    fprintf(stderr, "Error: %s has an invalid value\n", key);
                     return EINVAL;
                 }
                 THREADS_WORKER = (size_t)numeric_value;
@@ -199,7 +207,7 @@ int main(int argc, char* argv[]) {
             } else if (strcmp(key, "STORAGE_MAX_CAPACITY") == 0) {
                 // * STORAGE_MAX_CAPACITY
                 if (is_number(value, &numeric_value) == 0 || numeric_value <= 0) {
-                    fprintf(stderr, "Error: %s has an invalid value (%s)", key, value);
+                    fprintf(stderr, "Error: %s has an invalid value (%s)\n", key, value);
                     return EINVAL;
                 }
                 STORAGE_MAX_CAPACITY = (size_t)numeric_value;
@@ -207,7 +215,7 @@ int main(int argc, char* argv[]) {
             } else if (strcmp(key, "STORAGE_MAX_FILES") == 0 || numeric_value <= 0) {
                 // * STORAGE_MAX_FILES
                 if (is_number(value, &numeric_value) == 0) {
-                    fprintf(stderr, "Error: %s has an invalid value", key);
+                    fprintf(stderr, "Error: %s has an invalid value\n", key);
                     return EINVAL;
                 }
                 STORAGE_MAX_FILES = (size_t)numeric_value;
@@ -221,25 +229,25 @@ int main(int argc, char* argv[]) {
                 else if (strcmp(value, "lfu") == 0)
                     REPLACEMENT_POLICY = LFU;
                 else {
-                    fprintf(stderr, "Error: %s has an invalid value", key);
+                    fprintf(stderr, "Error: %s has an invalid value\n", key);
                     return EINVAL;
                 }
 
             } else if (strcmp(key, "SOCKET_PATH") == 0) {
                 // * SOCKET_PATH
-                if ((SOCKET_PATH = (char*)malloc(sizeof(char) * value_length + 1)) == NULL) {
+                if ((SOCKET_PATH = (char*)malloc(sizeof(char) * value_length)) == NULL) {
                     perror("Error: unable to allocate memory using malloc for SOCKET_PATH");
                     return errno;
                 }
-                strncpy(SOCKET_PATH, value, value_length + 1);
+                strncpy(SOCKET_PATH, value, value_length);
 
             } else if (strcmp(key, "LOG_PATH") == 0) {
                 // * LOG_PATH
-                if ((LOG_PATH = (char*)malloc(sizeof(char) * value_length + 1)) == NULL) {
+                if ((LOG_PATH = (char*)malloc(sizeof(char) * value_length)) == NULL) {
                     perror("Error: unable to allocate memory using malloc for LOG_PATH");
                     return errno;
                 }
-                strncpy(LOG_PATH, value, value_length + 1);
+                strncpy(LOG_PATH, value, value_length);
             }
         }
     }
@@ -267,13 +275,14 @@ int main(int argc, char* argv[]) {
 #endif
 
     // ! LOG FILE
-    // TODO: Sovrascrivere un log esistente o appenderci il contenuto alla fine?
-    if ((log_file = fopen(LOG_PATH, "w")) == NULL) {
+    // * Si è scelto di non sovrascrivere un eventuale file di log già esistente
+    // Ogni sessione del server è racchiusa tra due righe di bootstrap/shutdown
+    if ((log_file = fopen(LOG_PATH, "a")) == NULL) {
         perror("Error: failed to open log file");
         return errno;
     }
 
-    // Log di avvio del
+    // Avvio del server
     log_event("INFO", " == Server bootstrap == ");
 
     // ! SEGNALI
@@ -324,10 +333,7 @@ int main(int argc, char* argv[]) {
     memset(&socket_address, '0', sizeof(socket_address));
     socket_address.sun_family = AF_UNIX;
     // Imposto come path quello del socket preso dal file di configurazione
-    // ? Come validare SOCKET_PATH?
-    // TODO: controllo sull'esistenza del file?
-    // TODO: cambiare in strncpy
-    strcpy(socket_address.sun_path, SOCKET_PATH);
+    strcpy(socket_address.sun_path, SOCKET_PATH); // TODO: strncpy
 
     // Creo il socket lato server, che accetterà nuove connessioni
     int server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -464,6 +470,9 @@ int main(int argc, char* argv[]) {
     }
 
     // ! EXIT
+
+    // Stampo un sommario delle operazioni effettuate
+
     // Mi assicuro che tutti i threads spawnati siano terminati
     //pthread_join(thread_signal_handler, NULL);
     free(thread_pool);
