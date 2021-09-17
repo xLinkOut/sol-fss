@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <pthread.h>
+#include <queue.h>
 #include <server_config.h>
 #include <signal.h>
 #include <stdio.h>
@@ -23,9 +24,10 @@
 #define CONCURRENT_CONNECTIONS 8
 
 // Struttura dati per passare più argomenti ai threads worker
-struct worker_args {
+typedef struct worker_args {
     int pipe_output;
-};
+    Queue_t* task_queue;
+} worker_args_t;
 
 // TODO: spostare nel file di gestione dei segnali
 sig_atomic_t stop = 0;        // SIGHUP
@@ -74,7 +76,17 @@ static void* signals_handler(void* sigset) {
 
 // TODO: spostare in un file per i workers
 static void* worker(void* args) {
-    struct worker_args* worker_args = (struct worker_args*)args;
+    worker_args_t* worker_args = (worker_args_t*)args;
+
+    int fd;
+
+    // ! MAIN WORKER LOOP
+    // TODO: condizione while, eseguo finché !force_stop, ma nel caso di stop? Come faccio a eseguire finché i client non finiscono?
+    while(1){
+        fd = (int)queue_pop(worker_args->task_queue);
+        printf("Worker on %d\n", fd);
+    }
+
     return NULL;
 }
 
@@ -103,14 +115,13 @@ FILE* log_file = NULL;
 // Logga su file un particolare evento, con un certo livello di importanza
 // 'level' si suppone sia uno tra INFO, DEBUG, WARN, ERROR
 // TODO: spostare in un altro file
-void log_event(const char* level, const char* message){
+void log_event(const char* level, const char* message) {
     time_t timer = time(NULL);
     struct tm* tm_info = localtime(&timer);
     char date_time[20];
     strftime(date_time, sizeof(date_time), "%Y-%m-%d %H:%M:%S", tm_info);
     fprintf(log_file, "%s | %s\t| %s\n", date_time, level, message);
 }
-
 
 // TODO: routine di cleanup per la chiusura su errore del server
 int main(int argc, char* argv[]) {
@@ -265,7 +276,6 @@ int main(int argc, char* argv[]) {
     // Log di avvio del
     log_event("INFO", " == Server bootstrap == ");
 
-
     // ! SEGNALI
     // Segnali da mascherare durante l'esecuzione dell'handler
     sigset_t sigset;
@@ -338,6 +348,13 @@ int main(int argc, char* argv[]) {
         return errno;
     }
 
+    // ! TASKS QUEUE
+    Queue_t* task_queue = queue_init();
+    if (!task_queue) {
+        fprintf(stderr, "Error: failed to create a task queue");
+        return EXIT_FAILURE;
+    }
+
     // ! PIPE
     int pipe_workers[2];  // [0]: lettura, [1]: scrittura
     if (pipe(pipe_workers) == -1) {
@@ -354,7 +371,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Parametri dei threads worker
-    struct worker_args* worker_args = (struct worker_args*)malloc(sizeof(struct worker_args));
+    worker_args_t* worker_args = (worker_args_t*)malloc(sizeof(worker_args_t));
+    worker_args->task_queue = task_queue;
     worker_args->pipe_output = pipe_workers[1];
 
     // Inizializzo e lancio i threads worker
@@ -418,7 +436,7 @@ int main(int argc, char* argv[]) {
                 if (fd == server_socket && !stop) {
                     // * Nuovo connessione in entrata
                     // Accetto la connessione in entrata e controllo eventuali errori
-                    if((client_socket = accept(server_socket, NULL, 0)) == -1){
+                    if ((client_socket = accept(server_socket, NULL, 0)) == -1) {
                         // TODO: cleanup prima di uscire
                         perror("Error: failed to accept an incoming connection");
                         return errno;
@@ -429,7 +447,17 @@ int main(int argc, char* argv[]) {
                     if (client_socket > fd_num) fd_num = client_socket;
                     // Aggiorno il contatore dei clients attivi
                     active_clients++;
+                    log_event("INFO", "Accepted incoming connection");
                     printf("Info: accepted incoming connection on %d\n", client_socket);
+                } else {
+                    // * Nuovo task da parte di un client connesso
+                    // Inserisco il descrittore nella coda dei tasks
+                    queue_push(task_queue, (void*)fd);
+                    // Rimuovo il descrittore dal ready set
+                    FD_CLR(fd, &set);
+                    //if(fd == fd_num) fd_num--;
+                    log_event("INFO", "Nuovo task da x aggiunto in coda");
+                    printf("Aggiunto %d nella queue\n", fd);
                 }
             }
         }
