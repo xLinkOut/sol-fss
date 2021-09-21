@@ -184,7 +184,23 @@ int main(int argc, char* argv[]) {
             case ':':
                 switch (optopt) {  // Controllo che non sia R, che ha un argomento facoltativo
                     case 'R':      // E' proprio R, devo impostare n = 0
-                        // TODO:
+                        // Eseguo le operazioni relative al comando R, ma imposto come argomento di default 'n=0'
+                        // Controllo se è presente una richiesta in attesa di essere messa in coda
+                        if (request) queue_push(request_queue, request);
+                        // Creo una nuova richiesta
+                        if (!(request = queue_new_request())) {
+                            fprintf(stderr, "Error: failed to allocate memory for a new request");
+                            return EXIT_FAILURE;
+                        }
+                        // Salvo il comando
+                        request->command = optopt; // Non posso usare option perché è uguale a ':', uso optopt
+                        // Salvo la lista di argomenti
+                        if (!(request->arguments = malloc(sizeof(char) * 4))) {
+                            perror("Error: failed to allocate memory for request arguments");
+                            return EXIT_FAILURE;
+                        }
+                        strcpy(request->arguments, "n=0");
+                        break;
                     default:
                         fprintf(stderr, "Parameter -%c takes an argument\n", optopt);
                         return EINVAL;
@@ -200,6 +216,7 @@ int main(int argc, char* argv[]) {
 
     // Metto in coda l'eventuale ultima (o unica) richiesta
     if (request) queue_push(request_queue, request);
+
 
     return EXIT_SUCCESS;
 }
