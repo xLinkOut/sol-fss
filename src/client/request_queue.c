@@ -94,7 +94,7 @@ void queue_print(Queue_t* queue){
     // Finché non raggiungo la fine della coda
     while(scan){
         // Stampo le informazioni della richiesta
-        printf("[%d]: %c %s -d %s -t %ld\n",
+        printf("[%d]: <%c, %s, %s, %lu>\n",
         counter++, scan->command, scan->arguments, scan->dirname, scan->time);
         // Passo alla richiesta successiva
         scan = scan->next;
