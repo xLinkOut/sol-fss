@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     Queue_t* request_queue = queue_init();  // Coda delle richiesta
     if (!request_queue) {
         fprintf(stderr, "Error: failed to initialize request queue\n");
-        return EXIT_FAILURE;
+        return errno;
     }
     Request_t* request = NULL;  // Descrizione di una singola richiesta
 
@@ -74,12 +74,12 @@ int main(int argc, char* argv[]) {
                 // Controllo che non sia già stato specificato
                 if (SOCKET_PATH) {
                     fprintf(stderr, "Error: -f parameter can only be specified once\n");
-                    return EXIT_FAILURE;
+                    return EINVAL;
                 }
                 // Salvo il path del socket
                 if (!(SOCKET_PATH = malloc(sizeof(char) * strlen(optarg)))) {
                     perror("Error: failed to allocate memory for SOCKET_PATH");
-                    return EXIT_FAILURE;
+                    return errno;
                 }
                 strcpy(SOCKET_PATH, optarg);
                 break;
@@ -98,14 +98,14 @@ int main(int argc, char* argv[]) {
                 // Creo una nuova richiesta
                 if (!(request = queue_new_request())) {
                     fprintf(stderr, "Error: failed to allocate memory for a new request");
-                    return EXIT_FAILURE;
+                    return errno;
                 }
                 // Salvo il comando
                 request->command = option;
                 // Salvo la lista di argomenti
                 if (!(request->arguments = malloc(sizeof(char) * strlen(optarg)))) {
                     perror("Error: failed to allocate memory for request arguments");
-                    return EXIT_FAILURE;
+                    return errno;
                 }
                 strcpy(request->arguments, optarg);
                 break;
@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
                 // Quindi, alloco lo spazio per salvare l'argomento
                 if (!(request->dirname = malloc(sizeof(char) * strlen(optarg)))) {
                     perror("Error: failed to allocate memory for request dirname");
-                    return EXIT_FAILURE;
+                    return errno;
                 }
                 strcpy(request->dirname, optarg);
                 break;
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
                 // Quindi, alloco lo spazio per salvare l'argomento
                 if (!(request->dirname = malloc(sizeof(char) * strlen(optarg)))) {
                     perror("Error: failed to allocate memory for arguments");
-                    return EXIT_FAILURE;
+                    return errno;
                 }
                 strcpy(request->dirname, optarg);
                 break;
@@ -168,7 +168,7 @@ int main(int argc, char* argv[]) {
                 // Controllo che non sia già stato specificato
                 if (VERBOSE) {
                     fprintf(stderr, "Error: -p parameter can only be specified once\n");
-                    return EXIT_FAILURE;
+                    return EINVAL;
                 }
                 VERBOSE = true;
                 break;
@@ -190,14 +190,14 @@ int main(int argc, char* argv[]) {
                         // Creo una nuova richiesta
                         if (!(request = queue_new_request())) {
                             fprintf(stderr, "Error: failed to allocate memory for a new request");
-                            return EXIT_FAILURE;
+                            return errno;
                         }
                         // Salvo il comando
                         request->command = optopt; // Non posso usare option perché è uguale a ':', uso optopt
                         // Salvo la lista di argomenti
                         if (!(request->arguments = malloc(sizeof(char) * 4))) {
                             perror("Error: failed to allocate memory for request arguments");
-                            return EXIT_FAILURE;
+                            return errno;
                         }
                         strcpy(request->arguments, "n=0");
                         break;
