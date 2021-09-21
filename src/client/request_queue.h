@@ -37,4 +37,7 @@ Request_t* queue_new_request();
 // * Cancella un nodo creato con queue_new_node
 void queue_destroy_request(Request_t* request);
 
+// * Debug: stampa il contenuto della coda
+void queue_print(Queue_t*);
+
 #endif

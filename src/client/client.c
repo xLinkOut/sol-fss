@@ -217,6 +217,7 @@ int main(int argc, char* argv[]) {
     // Metto in coda l'eventuale ultima (o unica) richiesta
     if (request) queue_push(request_queue, request);
 
+    queue_print(request_queue); // ! Debug
 
     return EXIT_SUCCESS;
 }
