@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <time.h>
 
 // TODO: Liberare eventuale memoria prima di uscire
 //  TODO: anche nel caso di -h
@@ -44,6 +47,55 @@ void print_help() {
         "-h\t Print this message and exit\n");
 }
 
+// ! API
+// TODO: Spostare in file separato
+
+// Socket del client
+int client_socket = -1;
+
+// ! openConnection
+int openConnection(const char* sockname, int msec, const struct timespec abstime) {
+    // Controllo la validità degli argomenti
+    if (!sockname || msec < 0 || abstime.tv_sec < 0 || abstime.tv_nsec < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Controllo che il client non abbia già instaurato una connessione al server
+    if (client_socket > -1) {
+        errno = EISCONN;
+        return -1;
+    }
+
+    struct sockaddr_un socket_address;
+    // Inizializzo la struttura
+    memset(&socket_address, '0', sizeof(socket_address));
+    socket_address.sun_family = AF_UNIX;
+    // Imposto come path quello del socket passato come argomento
+    // TODO: controlli su SOCKET_PATH; strncpy
+    strcpy(socket_address.sun_path, sockname);
+
+    // Creo il socket lato client, che si connetterà al server
+    client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+    // Controllo la buona riuscita dell'operazione
+    if (client_socket == -1) return -1;
+
+    // Struttura dati per la nanosleep
+    struct timespec sleep_time = {
+        .tv_sec = msec >= 1000 ? msec / 1000 : 0,    // Se l'attesa è maggiore di un secondo, uso proprio i secondi come misura
+        .tv_nsec = msec < 1000 ? msec * 1000000 : 0  // Altrimenti, uso i nanosecondi
+    };
+
+    int connect_status = -1;
+    while ((connect_status = connect(client_socket, (struct sockaddr*)&socket_address, sizeof(socket_address))) == -1 && time(NULL) < abstime.tv_sec) {
+        //printf("Connection failed, I'll try again ...\n");
+        nanosleep(&sleep_time, NULL);  // Aspetto per msec
+    }
+
+    if (connect_status == -1) errno = ETIMEDOUT;
+    return connect_status;
+}
+
 int main(int argc, char* argv[]) {
     // Se non viene specificato alcun parametro, stampo l'usage ed esco
     if (argc == 1) {
@@ -51,6 +103,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    // ! PARSING
     // Altrimenti, parso i parametri passati da riga di comando
 
     // Nella optstring, il primo ':' serve a distinguere il caso di carattere sconosciuto, che ritorna '?',
@@ -76,12 +129,15 @@ int main(int argc, char* argv[]) {
                     fprintf(stderr, "Error: -f parameter can only be specified once\n");
                     return EINVAL;
                 }
+
                 // Salvo il path del socket
-                if (!(SOCKET_PATH = malloc(sizeof(char) * strlen(optarg)))) {
+                //SOCKET_PATH = strdup(optarg);
+                if (!(SOCKET_PATH = malloc(sizeof(char) * (strlen(optarg) + 1)))) {
                     perror("Error: failed to allocate memory for SOCKET_PATH");
                     return errno;
                 }
                 strcpy(SOCKET_PATH, optarg);
+
                 break;
 
             // * Comandi da eseguire
@@ -193,7 +249,7 @@ int main(int argc, char* argv[]) {
                             return errno;
                         }
                         // Salvo il comando
-                        request->command = optopt; // Non posso usare option perché è uguale a ':', uso optopt
+                        request->command = optopt;  // Non posso usare option perché è uguale a ':', uso optopt
                         // Salvo la lista di argomenti
                         if (!(request->arguments = malloc(sizeof(char) * 4))) {
                             perror("Error: failed to allocate memory for request arguments");
@@ -217,7 +273,28 @@ int main(int argc, char* argv[]) {
     // Metto in coda l'eventuale ultima (o unica) richiesta
     if (request) queue_push(request_queue, request);
 
-    queue_print(request_queue); // ! Debug
+    queue_print(request_queue);  // ! Debug
+
+    // ! CONNESSIONE (openConnection)
+    // Tempo di attesa tra un tentativo di connessione e l'altro (1 secondo)
+    int msec = 1000;
+    // Effettua nuovi tentativi di connessione fino al tempo assoluto abstime.tv_sec (10 secondi)
+    struct timespec abstime = {.tv_sec = time(NULL) + 10, .tv_nsec = 0};
+    // Instauro una connessione con il server
+    printf("Connecting...\n");
+    if (openConnection(SOCKET_PATH, msec, abstime) == 0) {
+        printf("Connected! Descriptor n.%d\n", client_socket);
+    } else {
+        perror("Error: something went wrong with the openConnection");
+        return errno;
+    }
+
+    // * Esecuzione delle richieste, in ordine FIFO
+    /*
+    while((request = queue_pop(request_queue))){
+        printf("%c\n", request->command);
+    }
+    */
 
     return EXIT_SUCCESS;
 }
