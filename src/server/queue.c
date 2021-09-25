@@ -59,8 +59,10 @@ void queue_destroy(Queue_t* queue) {
         free((void*)node);
     }
     if (queue->head) free((void*)queue->head);
-    if (&queue->mutex) pthread_mutex_destroy(&queue->mutex);
-    if (&queue->empty) pthread_cond_destroy(&queue->empty);
+    // Il compilatore qui consiglia di non controllare mutex ed empty, perché
+    // "address of 'queue->mutex' (lo stesso per queue->empty) will always evaluate to 'true'"
+    pthread_mutex_destroy(&queue->mutex);
+    pthread_cond_destroy(&queue->empty);
     free(queue);
 }
 
