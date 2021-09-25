@@ -84,6 +84,8 @@ static void* worker(void* args) {
     // TODO: condizione while, eseguo finché !force_stop, ma nel caso di stop? Come faccio a eseguire finché i client non finiscono?
     while(1){
         fd = (int)queue_pop(worker_args->task_queue);
+        // TODO: controllo terminazione, suppongo numero negativo se il thread deve terminare (i file descriptor sono interi non-negativi)
+        if(fd < 0) break;
         printf("Worker on %d\n", fd);
     }
 
@@ -470,11 +472,16 @@ int main(int argc, char* argv[]) {
     }
 
     // ! EXIT
-
     // Stampo un sommario delle operazioni effettuate
 
     // Mi assicuro che tutti i threads spawnati siano terminati
-    //pthread_join(thread_signal_handler, NULL);
+    // Prima il signal handler thread, che è il primo a terminare
+    pthread_join(thread_signal_handler, NULL);
+    // Poi inserisco un valore di "chiusura" per tutti i therad workers
+    for(int i=0; i<THREADS_WORKER;i++) queue_push(task_queue, (void*)-1);
+    // Quindi aspetto la loro imminente chiusura
+    for(int i=0; i<THREADS_WORKER;i++) pthread_join(thread_pool[i], NULL);
+    // E libero la memoria per la pool
     free(thread_pool);
 
     // Libero la memoria prima di uscire
