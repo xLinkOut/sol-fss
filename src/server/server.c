@@ -15,6 +15,7 @@
 #include <sys/time.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <utils.h>
 
 // TODO: liberare la memoria prima di uscire in caso di errore
 
@@ -22,6 +23,7 @@
 #define BUFFER_SIZE 512
 #define UNIX_PATH_MAX 108
 #define CONCURRENT_CONNECTIONS 8
+#define REQUEST_LENGTH 2048
 
 // Struttura dati per passare più argomenti ai threads worker
 typedef struct worker_args {
@@ -79,7 +81,11 @@ static void* worker(void* args) {
     worker_args_t* worker_args = (worker_args_t*)args;
 
     int fd;
-
+    char* request = malloc(sizeof(char) * REQUEST_LENGTH); // TODO: define 2048(?) as max len of a request
+    if(!request){
+        perror("Error: failed to allocate memory for request");
+        return NULL;
+    }
     // ! MAIN WORKER LOOP
     // TODO: condizione while, eseguo finché !force_stop, ma nel caso di stop? Come faccio a eseguire finché i client non finiscono?
     while(1){
@@ -87,8 +93,21 @@ static void* worker(void* args) {
         // TODO: controllo terminazione, suppongo numero negativo se il thread deve terminare (i file descriptor sono interi non-negativi)
         if(fd < 0) break;
         printf("Worker on %d\n", fd);
+
+        // Pulisco tracce di eventuali richieste precedenti
+        memset(request, 0, REQUEST_LENGTH); // TODO: request len
+        // Leggo il contenuto della richiesta del client
+        if(readn((long)fd, (void*)request, REQUEST_LENGTH) == -1){
+            fprintf(stderr,"Error: read on client failed\n");
+            return NULL;
+        }
+
+        printf("%s\n", request);
+        // Parsing della richiesta
+
     }
 
+    free(request);
     return NULL;
 }
 
