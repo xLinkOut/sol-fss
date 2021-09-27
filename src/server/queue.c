@@ -22,7 +22,6 @@ Queue_t* queue_init() {
     }
 
     // Inizializzo il nodo di testa
-    queue->head->content = NULL;
     queue->head->next = NULL;
 
     // Imposto il nodo in coda uguale a quello di testa, la coda è vuota
@@ -53,6 +52,7 @@ Queue_t* queue_init() {
 }
 
 void queue_destroy(Queue_t* queue) {
+    // Scorro la coda per cancellare tutti i nodi
     while (queue->head != queue->tail) {
         Node_t* node = (Node_t*)queue->head;
         queue->head = queue->head->next;
@@ -66,9 +66,9 @@ void queue_destroy(Queue_t* queue) {
     free(queue);
 }
 
-int queue_push(Queue_t* queue, void* data) {
+int queue_push(Queue_t* queue, int fd_ready) {
     // Controllo la validità degli argomenti
-    if ((queue == NULL) || (data == NULL)) {
+    if (!queue) {
         errno = EINVAL;
         return -1;
     }
@@ -76,7 +76,7 @@ int queue_push(Queue_t* queue, void* data) {
     Node_t* new_node = malloc(sizeof(Node_t));
     if (!new_node) return -1;
     // Imposto il suo contenuto
-    new_node->content = data;
+    new_node->fd_ready = fd_ready;
     new_node->next = NULL;
 
     // Accedo alla coda in maniera esclusiva
@@ -84,7 +84,7 @@ int queue_push(Queue_t* queue, void* data) {
     // Aggiungo il nuovo nodo in coda
     queue->tail->next = new_node;
     queue->tail = new_node;
-    queue->length += 1;
+    queue->length++;
     // Rilascio l'esclusività sulla coda
     // e risveglio eventuali consumatori in attesa
     SIGNAL(&queue->empty);
@@ -92,11 +92,11 @@ int queue_push(Queue_t* queue, void* data) {
     return 0;
 }
 
-void* queue_pop(Queue_t* queue) {
+int queue_pop(Queue_t* queue) {
     // Controllo la validità degli argomenti
-    if (queue == NULL) {
+    if (!queue) {
         errno = EINVAL;
-        return NULL;
+        return -2;
     }
 
     // Accedo alla coda in maniera esclusiva
@@ -110,16 +110,16 @@ void* queue_pop(Queue_t* queue) {
     // Tuttavia, è buona prassi controllare che sia effettivamente
     // stato aggiunto un nuovo nodo, altrimenti ritorno
     // ? Troppo drastico utilizzare assert() ?
-    if (!queue->head->next) return NULL;
+    if (!queue->head->next) return -2;
 
     // Preparo l'occorrente per estrarre il nodo dalla coda
     Node_t* node = (Node_t*)queue->head;
-    void* data = (queue->head->next)->content;
+    int fd_ready = (queue->head->next)->fd_ready;
     queue->head = queue->head->next;
-    queue->length -= 1;
+    queue->length--;
     // ? Controllare che length sia >= 0 ?
     UNLOCK(&queue->mutex);
 
     free((void*)node);
-    return data;
+    return fd_ready;
 }

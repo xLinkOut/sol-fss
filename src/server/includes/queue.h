@@ -5,19 +5,19 @@
 
 #include <pthread.h>
 
-// * Struttura dati di un elemento della coda
+// * Struttura dati di un file descriptor pronto in coda
 typedef struct Node {
-    void* content;
+    int fd_ready; // Indice di un descrittore pronto, oppure segnale di terminazione
     struct Node* next;
 } Node_t;
 
 // * Struttura dati della coda
 typedef struct Queue {
-    Node_t* head;
-    Node_t* tail;
-    unsigned long length;
-    pthread_mutex_t mutex;
-    pthread_cond_t empty;
+    Node_t* head; // Testa
+    Node_t* tail; // Coda
+    unsigned long length; // Tasks in coda
+    pthread_mutex_t mutex; // Accesso esclusivo
+    pthread_cond_t empty; // Coda vuota
 } Queue_t;
 
 // * Inizializza la coda e ritorna un puntatore ad essa
@@ -26,10 +26,14 @@ Queue_t* queue_init();
 // * Cancella una coda creata con queue_init
 void queue_destroy(Queue_t* queue);
 
-// * Inserisce un elemento nella coda
-int queue_push(Queue_t* queue, void* data);
+// * Inserisce un fd nella coda
+int queue_push(Queue_t* queue, int data);
 
-// * Estrae un elemento dalla coda
-void* queue_pop(Queue_t* queue);
+// * Estrae un fd dalla coda
+// ! Files descriptor validi sono interi non-negativi
+// Il valore -1 viene interpretato dal thread worker come segnale di terminazione da parte del dispatcher
+// Il valore -2 viene interpretato come errore della funzione queue_pop
+// Qualsiasi altro valore negativo è interpretato dal thread worker come invalido
+int queue_pop(Queue_t* queue);
 
 #endif

@@ -74,7 +74,7 @@ typedef struct worker_args {
 static void* worker(void* args) {
     worker_args_t* worker_args = (worker_args_t*)args;
 
-    int fd;
+    int fd_ready;
     char* request = malloc(sizeof(char) * REQUEST_LENGTH);
     if(!request){
         perror("Error: failed to allocate memory for request");
@@ -83,15 +83,31 @@ static void* worker(void* args) {
     // ! MAIN WORKER LOOP
     // TODO: condizione while, eseguo finché !force_stop, ma nel caso di stop? Come faccio a eseguire finché i client non finiscono?
     while(1){
-        fd = (int)queue_pop(worker_args->task_queue);
-        // TODO: controllo terminazione, suppongo numero negativo se il thread deve terminare (i file descriptor sono interi non-negativi)
-        if(fd < 0) break;
-        printf("Worker on %d\n", fd);
+        // Recupero un file descriptor pronto dalla queue
+        fd_ready = queue_pop(worker_args->task_queue);
+        
+        // Controllo che la pop non abbia ritornato un codice di errore (-2)
+        if(fd_ready == -2){
+            perror("Error: failed to pop an element from task queue");
+            return NULL;
+        }
+        
+        // Controllo che non sia un segnale di terminazine dal dispatcher (-1)
+        if(fd_ready == -1) break;
+
+        // Controllo che in coda non sia finito un qualsiasi altro valore negativo
+        if(fd_ready < 0){
+            fprintf(stderr, "Error: negative file descriptor in task queue\n");
+            return NULL;
+        }
+
+        // A questo punto sono sicuro di avere un fd valido
+        printf("Worker on %d\n", fd_ready);
 
         // Pulisco tracce di eventuali richieste precedenti
         memset(request, 0, REQUEST_LENGTH);
         // Leggo il contenuto della richiesta del client
-        if(readn((long)fd, (void*)request, REQUEST_LENGTH) == -1){
+        if(readn((long)fd_ready, (void*)request, REQUEST_LENGTH) == -1){
             fprintf(stderr,"Error: read on client failed\n");
             return NULL;
         }
@@ -453,7 +469,7 @@ int main(int argc, char* argv[]) {
                 } else {
                     // * Nuovo task da parte di un client connesso
                     // Inserisco il descrittore nella coda dei tasks
-                    queue_push(task_queue, (void*)fd);
+                    queue_push(task_queue, fd);
                     // Rimuovo il descrittore dal ready set
                     FD_CLR(fd, &set);
                     //if(fd == fd_num) fd_num--;
@@ -471,7 +487,7 @@ int main(int argc, char* argv[]) {
     // Prima il signal handler thread, che è il primo a terminare
     pthread_join(thread_signal_handler, NULL);
     // Poi inserisco un valore di "chiusura" per tutti i thread workers
-    for(int i=0; i<THREADS_WORKER;i++) queue_push(task_queue, (void*)-1);
+    for(int i=0; i<THREADS_WORKER;i++) queue_push(task_queue, -1);
     // Quindi aspetto la loro imminente chiusura
     for(int i=0; i<THREADS_WORKER;i++) pthread_join(thread_pool[i], NULL);
     // E libero la memoria per la pool
@@ -482,12 +498,12 @@ int main(int argc, char* argv[]) {
     free(SOCKET_PATH);
     free(LOG_PATH);
 
-    // Elimino il socket file
-    unlink(SOCKET_PATH);
-
     // Chiudo i socket
     close(server_socket);
     close(client_socket);
+
+    // Elimino il socket file
+    unlink(SOCKET_PATH);
 
     // Log di chiusura
     log_event("INFO", " == Server shutdown == ");
