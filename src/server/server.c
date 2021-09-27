@@ -3,7 +3,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <queue.h>
-#include <server_config.h>
+#include <config.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
