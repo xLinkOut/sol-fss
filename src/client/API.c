@@ -5,9 +5,14 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <utils.h>
+#include <stdio.h>
+#include <unistd.h>
 
 // Imposto il socket con un valore negativo, e.g. 'non connesso'
 int client_socket = -1;
+// Buffer per memorizzare i dati da inviare al server
+char message_buffer[REQUEST_LENGTH];
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime) {
     // Controllo la validità degli argomenti
@@ -50,4 +55,33 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 
     if (connect_status == -1) errno = ETIMEDOUT;
     return connect_status;
+}
+
+int closeConnection(const char* sockname){
+    // Controllo la validità degli argomenti
+    if(!sockname){
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Mando al server un messaggio di uscita
+    // Svuoto il buffer di comunicazione
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    // Scrivo nel buffer il comando per chiudere la connessione
+    snprintf(message_buffer, REQUEST_LENGTH, "%d", -1); // TODO: Enum per operazioni
+    // Invio il messaggio al server
+    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+
+    // Non aspetto una risposta dal server, chiuso il socket
+    if(close(client_socket) == -1){
+        client_socket = -1;
+        return -1;
+    }
+
+    // Resetto il socket
+    client_socket = -1;
+
+    return 0;
 }

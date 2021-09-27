@@ -214,13 +214,11 @@ int main(int argc, char* argv[]) {
     // Effettua nuovi tentativi di connessione fino al tempo assoluto abstime.tv_sec (10 secondi)
     struct timespec abstime = {.tv_sec = time(NULL) + 10, .tv_nsec = 0};
     // Instauro una connessione con il server
-    printf("Connecting...\n");
-    if (openConnection(SOCKET_PATH, msec, abstime) == 0) {
-        printf("Connected! Descriptor n.%d\n", client_socket);
-    } else {
-        perror("Error: something went wrong with openConnection");
+    if (openConnection(SOCKET_PATH, msec, abstime) == -1) {
+        perror("Error: failed to initiate socket connection");
         return errno;
     }
+    if(VERBOSE) printf("Connection established correctly to '%s'\n", SOCKET_PATH);
 
     // * Esecuzione delle richieste, in ordine FIFO
     /*
@@ -230,6 +228,11 @@ int main(int argc, char* argv[]) {
     */
 
     // * Chiusura della connessione con il server
+    if(closeConnection(SOCKET_PATH) == -1){
+        perror("Error: failed to close socket connection");
+        return errno;
+    }
+    if(VERBOSE) printf("Connection on '%s' closed\n", SOCKET_PATH);
 
     return EXIT_SUCCESS;
 }
