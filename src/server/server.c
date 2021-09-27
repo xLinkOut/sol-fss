@@ -1,7 +1,5 @@
 // @author Luca Cirillo (545480)
 
-//#define _POSIX_C_SOURCE 199309L // Sigaction
-
 #include <errno.h>
 #include <pthread.h>
 #include <queue.h>
@@ -18,18 +16,7 @@
 #include <utils.h>
 
 // TODO: liberare la memoria prima di uscire in caso di errore
-
-// TODO: spostare in un file di utilities
-#define BUFFER_SIZE 512
-#define UNIX_PATH_MAX 108
-#define CONCURRENT_CONNECTIONS 8
-#define REQUEST_LENGTH 2048
-
-// Struttura dati per passare più argomenti ai threads worker
-typedef struct worker_args {
-    int pipe_output;
-    Queue_t* task_queue;
-} worker_args_t;
+// TODO: routine di cleanup per la chiusura su errore del server
 
 // TODO: spostare nel file di gestione dei segnali
 sig_atomic_t stop = 0;        // SIGHUP
@@ -77,11 +64,18 @@ static void* signals_handler(void* sigset) {
 }
 
 // TODO: spostare in un file per i workers
+
+// Struttura dati per passare più argomenti ai threads worker
+typedef struct worker_args {
+    int pipe_output;
+    Queue_t* task_queue;
+} worker_args_t;
+
 static void* worker(void* args) {
     worker_args_t* worker_args = (worker_args_t*)args;
 
     int fd;
-    char* request = malloc(sizeof(char) * REQUEST_LENGTH); // TODO: define 2048(?) as max len of a request
+    char* request = malloc(sizeof(char) * REQUEST_LENGTH);
     if(!request){
         perror("Error: failed to allocate memory for request");
         return NULL;
@@ -95,7 +89,7 @@ static void* worker(void* args) {
         printf("Worker on %d\n", fd);
 
         // Pulisco tracce di eventuali richieste precedenti
-        memset(request, 0, REQUEST_LENGTH); // TODO: request len
+        memset(request, 0, REQUEST_LENGTH);
         // Leggo il contenuto della richiesta del client
         if(readn((long)fd, (void*)request, REQUEST_LENGTH) == -1){
             fprintf(stderr,"Error: read on client failed\n");
@@ -111,31 +105,12 @@ static void* worker(void* args) {
     return NULL;
 }
 
-// TODO: spostare in un file di utilities
-// Converte una stringa in un numero
-int is_number(const char* arg, long* num) {
-    char* string = NULL;
-    long value = strtol(arg, &string, 10);
-
-    if (errno == ERANGE) {
-        perror("Error: an overflow occurred using is_number");
-        exit(errno);
-    }
-
-    if (string != NULL && *string == (char)0) {
-        *num = value;
-        return 1;
-    }
-
-    return 0;
-}
 
 // File di log
 FILE* log_file = NULL;
 
 // Logga su file un particolare evento, con un certo livello di importanza
-// 'level' si suppone sia uno tra INFO, DEBUG, WARN, ERROR
-// TODO: spostare in un altro file
+// 'level' si suppone essere uno tra INFO, DEBUG, WARN, ERROR
 void log_event(const char* level, const char* message) {
     time_t timer = time(NULL);
     struct tm* tm_info = localtime(&timer);
@@ -144,7 +119,6 @@ void log_event(const char* level, const char* message) {
     fprintf(log_file, "%s | %s\t| %s\n", date_time, level, message);
 }
 
-// TODO: routine di cleanup per la chiusura su errore del server
 int main(int argc, char* argv[]) {
     // ! Parametri in ingresso:
     //  * 1. <config_path>: path al file di configurazione
@@ -438,7 +412,7 @@ int main(int argc, char* argv[]) {
     struct timeval current_timeout;
 
     // ! MAIN LOOP (DISPATCHER)
-    // Rimango attivo finchè arriva un segnale di SIGINT|SIGQUIT (force_stop)
+    // Rimango attivo finché arriva un segnale di SIGINT|SIGQUIT (force_stop)
     // oppure arriva un segnale di SIGHUP e non ci sono più client connessi
     // * Termino quando: force_stop OR (stop AND active_clients == 0)
     while (!(force_stop || (stop && (active_clients == 0)))) {
@@ -496,7 +470,7 @@ int main(int argc, char* argv[]) {
     // Mi assicuro che tutti i threads spawnati siano terminati
     // Prima il signal handler thread, che è il primo a terminare
     pthread_join(thread_signal_handler, NULL);
-    // Poi inserisco un valore di "chiusura" per tutti i therad workers
+    // Poi inserisco un valore di "chiusura" per tutti i thread workers
     for(int i=0; i<THREADS_WORKER;i++) queue_push(task_queue, (void*)-1);
     // Quindi aspetto la loro imminente chiusura
     for(int i=0; i<THREADS_WORKER;i++) pthread_join(thread_pool[i], NULL);

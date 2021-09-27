@@ -1,5 +1,7 @@
-#ifndef _SERVER_CONFIG_H
-#define _SERVER_CONFIG_H
+// @author Luca Cirillo (545480)
+
+#ifndef _SERVER_CONFIG_H_
+#define _SERVER_CONFIG_H_
 
 // Politica di rimpiazzamento
 enum POLICY { FIFO, LRU, LFU };
