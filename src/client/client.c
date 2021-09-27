@@ -9,26 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <utils.h>
 
 // TODO: Liberare eventuale memoria prima di uscire, anche nel caso di -h
-
-// Converte una stringa in un numero
-int is_number(const char* arg, long* num) {
-    char* string = NULL;
-    long value = strtol(arg, &string, 10);
-
-    if (errno == ERANGE) {
-        perror("Error: an overflow occurred using is_number");
-        exit(errno);
-    }
-
-    if (string != NULL && *string == (char)0) {
-        *num = value;
-        return 1;
-    }
-
-    return 0;
-}
 
 void print_help() {
     printf(
