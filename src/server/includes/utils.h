@@ -9,6 +9,8 @@
 #define UNIX_PATH_MAX 108
 #define CONCURRENT_CONNECTIONS 8
 #define REQUEST_LENGTH 2048
+#define CLIENT_LEFT 0
+#define PIPE_LEN 16
 
 #define LOCK(lock)                               \
     if (pthread_mutex_lock(lock) != 0) {         \
