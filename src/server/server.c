@@ -14,6 +14,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <utils.h>
+#include <storage.h>
 
 // TODO: liberare la memoria prima di uscire in caso di errore
 // TODO: routine di cleanup per la chiusura su errore del server
@@ -327,6 +328,13 @@ int main(int argc, char* argv[]) {
     // Avvio del server
     log_event("INFO", " == Server bootstrap == ");
 
+    // ! STORAGE
+    storage_t* storage = storage_create(STORAGE_MAX_FILES, STORAGE_MAX_CAPACITY, REPLACEMENT_POLICY);
+    if(!storage){
+        perror("Error: storage creation failed");
+        return errno;
+    }
+
     // ! SEGNALI
     // Segnali da mascherare durante l'esecuzione dell'handler
     sigset_t sigset;
@@ -560,6 +568,9 @@ int main(int argc, char* argv[]) {
     // Chiudo la pipe dispatcher <-> workers
     close(pipe_workers[0]);
     close(pipe_workers[1]);
+
+    // Cancello lo storage
+    storage_destroy(storage);
 
     // Elimino il socket file
     unlink(SOCKET_PATH);
