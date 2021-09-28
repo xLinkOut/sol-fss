@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <storage.h>
 #include <string.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -14,7 +15,6 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <utils.h>
-#include <storage.h>
 
 // TODO: liberare la memoria prima di uscire in caso di errore
 // TODO: routine di cleanup per la chiusura su errore del server
@@ -82,8 +82,9 @@ static void* signals_handler(void* sigset) {
 
 // Struttura dati per passare più argomenti ai threads worker
 typedef struct worker_args {
-    int pipe_output;
-    Queue_t* task_queue;
+    storage_t* storage;   // Riferimento allo storage in uso
+    Queue_t* task_queue;  // Coda dei task che arrivano e vengono smistati dal dispatcher
+    int pipe_output;      // Pipe di comunicazione worker(s) <-> dispatcher
 } worker_args_t;
 
 static void* worker(void* args) {
@@ -330,7 +331,7 @@ int main(int argc, char* argv[]) {
 
     // ! STORAGE
     storage_t* storage = storage_create(STORAGE_MAX_FILES, STORAGE_MAX_CAPACITY, REPLACEMENT_POLICY);
-    if(!storage){
+    if (!storage) {
         perror("Error: storage creation failed");
         return errno;
     }
@@ -432,6 +433,7 @@ int main(int argc, char* argv[]) {
 
     // Parametri dei threads worker
     worker_args_t* worker_args = (worker_args_t*)malloc(sizeof(worker_args_t));
+    worker_args->storage = storage;
     worker_args->task_queue = task_queue;
     worker_args->pipe_output = pipe_workers[1];
 
