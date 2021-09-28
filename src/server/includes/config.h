@@ -3,6 +3,8 @@
 #ifndef _SERVER_CONFIG_H_
 #define _SERVER_CONFIG_H_
 
+#include <stddef.h> // size_t
+
 // Politica di rimpiazzamento
 enum POLICY { FIFO, LRU, LFU };
 
