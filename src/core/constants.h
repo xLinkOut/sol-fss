@@ -1,6 +1,15 @@
 // @author Luca Cirillo (545480)
+// Costanti e macro condivise tra client e server
 
-// Costanti condivise tra client e server
+// Gestione di flags
+#define SET_FLAG(mask, flag) mask |= flag
+#define RESET_MASK(mask) mask = 0
+
+// Flags per la openFile
+#define O_CREATE 1
+#define O_LOCK 2
+#define IS_O_CREATE(mask) (mask & 1)
+#define IS_O_LOCK(mask) ((mask >> 1) & 1)
 
 typedef enum APICode {
     OPEN,       // openFile
