@@ -15,10 +15,10 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <utils.h>
+#include <constants.h>
 
 // TODO: liberare la memoria prima di uscire in caso di errore
 // TODO: routine di cleanup per la chiusura su errore del server
-// TODO: codificare i comandi in una Enum
 
 // File di log
 FILE* log_file = NULL;
@@ -146,7 +146,7 @@ static void* worker(void* args) {
 
         // * Eseguo le operazioni relative al comando ricevuto
         switch (command) {
-            case -1:  // closeConnection
+            case DISCONNECT:  // closeConnection
                 // Un client ha richiesto la chiusura della connessione, lo comunico al dispatcher tramite pipe
                 // Preparo il buffer per la risposta
                 memset(response, 0, REQUEST_LENGTH);

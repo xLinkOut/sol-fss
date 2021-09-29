@@ -8,6 +8,7 @@
 #include <utils.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <constants.h>
 
 // Imposto il socket con un valore negativo, e.g. 'non connesso'
 int client_socket = -1;
@@ -68,7 +69,7 @@ int closeConnection(const char* sockname){
     // Svuoto il buffer di comunicazione
     memset(message_buffer, 0, REQUEST_LENGTH);
     // Scrivo nel buffer il comando per chiudere la connessione
-    snprintf(message_buffer, REQUEST_LENGTH, "%d", -1); // TODO: Enum per operazioni
+    snprintf(message_buffer, REQUEST_LENGTH, "%d", DISCONNECT);
     // Invio il messaggio al server
     if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
         return -1;
