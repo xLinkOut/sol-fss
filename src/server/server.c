@@ -107,7 +107,7 @@ static void* worker(void* args) {
         // Controllo che la pop non abbia ritornato un codice di errore (-2)
         if (fd_ready == -2) {
             perror("Error: failed to pop an element from task queue");
-            return NULL;
+            break;
         }
 
         // Controllo che non sia un segnale di terminazine dal dispatcher (-1)
@@ -130,8 +130,8 @@ static void* worker(void* args) {
             return NULL;
         }
 
-        // Faccio il parsing della richiesta
-        // * Il formato atteso è: <int:codice_richiesta> <string:parametri>[,<string:parametri>]
+        // * Faccio il parsing della richiesta
+        // Il formato atteso è: <int:codice_richiesta> <string:parametri>[,<string:parametri>]
         printf("Richiesta: %s\n", request);
         // Uso lo spazio come delimitatore
         char* token = strtok_r(request, " ", &strtok_status);
@@ -144,7 +144,7 @@ static void* worker(void* args) {
             continue;
         }
 
-        // Eseguo le operazioni relative al comando ricevuto
+        // * Eseguo le operazioni relative al comando ricevuto
         switch (command) {
             case -1:  // closeConnection
                 // Un client ha richiesto la chiusura della connessione, lo comunico al dispatcher tramite pipe
