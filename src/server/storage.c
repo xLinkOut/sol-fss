@@ -6,7 +6,7 @@
 #include <storage.h>
 #include <string.h>
 
-storage_t* storage_create(size_t buckets) {
+storage_t* storage_create(size_t buckets, size_t max_files) {
     // Controllo la validità degli argomenti
     if (buckets == 0) {
         errno = EINVAL;
@@ -22,6 +22,10 @@ storage_t* storage_create(size_t buckets) {
         free(storage);
         return NULL;
     }
+
+    // Inizializzo o salvo gli altri parametri
+    storage->max_files = max_files;
+    storage->number_of_files = 0;
 
     // Ritorno un puntatore allo storage
     return storage;

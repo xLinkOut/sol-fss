@@ -7,7 +7,11 @@
 
 // * Struttura dati dello storage
 typedef struct Storage {
-    icl_hash_t* files;
+    icl_hash_t* files;  // Hashmap di StorageFile
+
+    size_t number_of_files;  // Numero di files attualmente memorizzati
+    size_t max_files;        // Numero di files massimo memorizzabile
+
 } storage_t;
 
 // * Struttura dati di un qualsiasi file memorizzato nello storage
