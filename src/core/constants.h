@@ -11,7 +11,7 @@
 #define IS_O_CREATE(mask) (mask & 1)
 #define IS_O_LOCK(mask) ((mask >> 1) & 1)
 
-typedef enum APICode {
+typedef enum RequestCode {
     OPEN,       // openFile
     READ,       // readFile
     READN,      // readNFiles
@@ -22,4 +22,4 @@ typedef enum APICode {
     CLOSE,      // closeFile
     REMOVE,     // removeFile
     DISCONNECT  // closeConnection
-} api_code_t;
+} request_code;
