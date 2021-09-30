@@ -1,7 +1,9 @@
 // @author Luca Cirillo (545480)
 
+#include <constants.h>
 #include <errno.h>
 #include <icl_hash.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <storage.h>
 #include <string.h>
@@ -79,4 +81,59 @@ void storage_file_destroy(storage_file_t* file) {
     free(file->name);
     free(file->contents);
     free(file);
+}
+
+// ! APIs
+int storage_open_file(storage_t* storage, const char* pathname, int flags) {
+    // Controllo la validità degli argomenti
+    if (!storage || !pathname) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Controllo se i flags O_CREATE e O_LOCK sono settati
+    bool create_flag = IS_O_CREATE(flags);
+    bool lock_flag = IS_O_LOCK(flags);
+    // Controllo se il file esiste all'interno dello storage
+    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    // Mantengo separata l'informazione sull'esistenza del file per leggibilità
+    bool already_exists = (bool)file;
+
+    // Gestisco prima tutte le possibili situazioni di errore
+    // Flag O_CREATE settato e file già esistente
+    if (create_flag && already_exists) {
+        errno = EEXIST;
+        return -1;
+    }
+    // Flag O_CREATE non settato e file non esistente
+    if (!create_flag && !already_exists) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    // I flags sono coerenti con lo stato dello storage, posso procedere
+    // Distinguo il caso in cui il file esiste già da quello in cui non esiste ancora
+    if (already_exists) {
+        // * Il file esiste già nello storage, lo apro per il client in lettura e scrittura
+        // TODO: controllo che lo stesso client non voglia aprire più volte lo stesso file
+    } else {
+        // * Il file non esiste ancora nello storage, lo creo
+        // Controllo che nello storage ci sia effettivamente spazio in termini di numero di files
+        if (storage->number_of_files == storage->max_files) {
+            errno = ENOSPC;
+            return -1;
+        }
+        // Creo il file all'interno dello storage
+        file = storage_file_create(pathname, NULL, 0);
+        icl_hash_insert(storage->files, pathname, file);
+    }
+
+    // Controllo se il file deve essere aperto in modalità locked
+    if (lock_flag) {
+        // TODO: lock in scrittura
+    } else {
+        // TODO: lock soltanto in lettura
+    }
+
+    return 0;
 }
