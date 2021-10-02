@@ -11,10 +11,12 @@ typedef struct Storage {
 
     size_t number_of_files;  // Numero di files attualmente memorizzati
     size_t max_files;        // Numero di files massimo memorizzabile
+    size_t capacity;         // Spazio attualmente occupato dai files
+    size_t max_capacity;     // Spazio massimo disponibile
 
 } storage_t;
 
-// * Struttura dati di un qualsiasi file memorizzato nello storage
+// * Struttura dati di un generico file memorizzato nello storage
 typedef struct StorageFile {
     char* name;      // Nome del file
     void* contents;  // Contenuto del file
@@ -22,7 +24,7 @@ typedef struct StorageFile {
 } storage_file_t;
 
 // * Inizializza uno storage e ritorna un puntatore ad esso
-storage_t* storage_create();
+storage_t* storage_create(size_t max_files, size_t max_capacity);
 
 // * Cancella uno storage creato con storage_create
 void storage_destroy(storage_t* storage);

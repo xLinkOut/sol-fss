@@ -8,9 +8,9 @@
 #include <storage.h>
 #include <string.h>
 
-storage_t* storage_create(size_t buckets, size_t max_files) {
+storage_t* storage_create(size_t max_files, size_t max_capacity) {
     // Controllo la validità degli argomenti
-    if (buckets == 0) {
+    if (max_files == 0 || max_capacity == 0) {
         errno = EINVAL;
         return NULL;
     }
@@ -19,15 +19,17 @@ storage_t* storage_create(size_t buckets, size_t max_files) {
     storage_t* storage = malloc(sizeof(storage_t));
     if (!storage) return NULL;
     // Creo la hashmap per memorizzare i files
-    storage->files = icl_hash_create(buckets, NULL, NULL);
+    storage->files = icl_hash_create(max_files, NULL, NULL);
     if (!storage->files) {
         free(storage);
         return NULL;
     }
 
     // Inizializzo o salvo gli altri parametri
-    storage->max_files = max_files;
     storage->number_of_files = 0;
+    storage->max_files = max_files;
+    storage->capacity = 0;
+    storage->max_capacity = max_capacity;
 
     // Ritorno un puntatore allo storage
     return storage;
@@ -114,11 +116,12 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags) {
     // I flags sono coerenti con lo stato dello storage, posso procedere
     // Distinguo il caso in cui il file esiste già da quello in cui non esiste ancora
     if (already_exists) {
-        // * Il file esiste già nello storage, lo apro per il client in lettura e scrittura
+        // * Il file esiste già nello storage, lo apro per il client in lettura (e in scrittura se O_LOCK è stato settato)
         // TODO: controllo che lo stesso client non voglia aprire più volte lo stesso file
     } else {
         // * Il file non esiste ancora nello storage, lo creo
         // Controllo che nello storage ci sia effettivamente spazio in termini di numero di files
+        // ? In questo caso occorre far partire la procedura di replace?
         if (storage->number_of_files == storage->max_files) {
             errno = ENOSPC;
             return -1;
