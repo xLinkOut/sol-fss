@@ -86,7 +86,8 @@ void storage_file_destroy(storage_file_t* file) {
 }
 
 // ! APIs
-int storage_open_file(storage_t* storage, const char* pathname, int flags) {
+
+int storage_open_file(storage_t* storage, const char* pathname, int flags, int client) {
     // Controllo la validità degli argomenti
     if (!storage || !pathname) {
         errno = EINVAL;
@@ -116,8 +117,21 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags) {
     // I flags sono coerenti con lo stato dello storage, posso procedere
     // Distinguo il caso in cui il file esiste già da quello in cui non esiste ancora
     if (already_exists) {
-        // * Il file esiste già nello storage, lo apro per il client in lettura (e in scrittura se O_LOCK è stato settato)
-        // TODO: controllo che lo stesso client non voglia aprire più volte lo stesso file
+        // * Il file esiste già nello storage, faccio gli adeguati controlli per ogni operazione
+        // Controllo che lo stesso client non voglia aprire più volte lo stesso file
+        // if client in file->readers, return
+       
+        // Controllo che il file non sia lockato da un altro client
+        // if file->writer != 0, return // ? Oppure aspetto?
+
+        // Apro il file in lettura
+        // linked_list_push(file->readers, client);
+        
+        // Controllo se aprire il file anche in scrittura
+        if(lock_flag){
+            // Sicuramente nessun altro ha la lock sul file, in quanto è stato appena creato
+            file->writer = client;
+        }
     } else {
         // * Il file non esiste ancora nello storage, lo creo
         // Controllo che nello storage ci sia effettivamente spazio in termini di numero di files
@@ -129,13 +143,15 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags) {
         // Creo il file all'interno dello storage
         file = storage_file_create(pathname, NULL, 0);
         icl_hash_insert(storage->files, pathname, file);
-    }
 
-    // Controllo se il file deve essere aperto in modalità locked
-    if (lock_flag) {
-        // TODO: lock in scrittura
-    } else {
-        // TODO: lock soltanto in lettura
+        // Apro il file in lettura
+        // linked_list_push(file->readers, client);
+
+        // Controllo se aprire il file anche in scrittura
+        if(lock_flag){
+            // Sicuramente nessun altro ha la lock sul file, in quanto è stato appena creato
+            file->writer = client;
+        }
     }
 
     return 0;
