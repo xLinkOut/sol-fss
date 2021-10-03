@@ -19,6 +19,7 @@
 
 // TODO: liberare la memoria prima di uscire in caso di errore
 // TODO: routine di cleanup per la chiusura su errore del server
+// TODO: ResponseCode appropriati ad ogni API call
 
 // File di log
 FILE* log_file = NULL;
@@ -88,16 +89,23 @@ typedef struct worker_args {
 } worker_args_t;
 
 static void* worker(void* args) {
+    // Argomenti passati al thread worker
     worker_args_t* worker_args = (worker_args_t*)args;
 
-    int fd_ready;
-    char* request = malloc(sizeof(char) * REQUEST_LENGTH);
+    int fd_ready; // fd del client servito al momento
+    int api_exit_code = 0; // Codice di uscita di una API call
+    char* strtok_status; // Stato per le chiamate alla syscall strtok_r
+    char request[MESSAGE_LENGTH]; // Messaggio richiesta del client
+    char response[MESSAGE_LENGTH]; // Messaggio risposta del server
+    char pathname[MESSAGE_LENGTH]; // Quasi ogni API call prevede un pathname
+    /*
+    char request = malloc(sizeof(char) * REQUEST_LENGTH);
     char* response = malloc(sizeof(char) * REQUEST_LENGTH);
     if (!request || !response) {
         perror("Error: failed to allocate memory for request or response");
         return NULL;  // ? pthread_exit ?
     }
-    char* strtok_status;
+    */
     // ! MAIN WORKER LOOP
     // TODO: condizione while, eseguo finché !force_stop, ma nel caso di stop? Come faccio a eseguire finché i client non finiscono?
     while (1) {
@@ -146,9 +154,42 @@ static void* worker(void* args) {
 
         // * Eseguo le operazioni relative al comando ricevuto
         switch (command) {
+            case OPEN: // * openFile
+                // OPEN <str:pathname> <int:flags>
+                
+                // Parso il pathname dalla richiesta
+                token = strtok_r(NULL, " ", &strtok_status);
+                memset(pathname, 0, MESSAGE_LENGTH);
+                if(!token || sscanf(token, "%s", pathname) != 1){
+                    fprintf(stderr, "Error: bad request\n");
+                    continue;
+                }
+                // Parso i flags dalla richiesta
+                int flags = 0;
+                token = strtok_r(NULL, " ", &strtok_status);
+                if(!token || sscanf(token, "%d", &flags) != 1){
+                    fprintf(stderr, "Error: bad request\n");
+                    continue;
+                }
+
+                printf("OPEN: %s %d\n", pathname, flags);
+
+                // Eseguo la API call
+                api_exit_code = storage_open_file(worker_args->storage, pathname, flags, fd_ready);
+                // Preparo il buffer per la risposta
+                memset(response, 0, MESSAGE_LENGTH);
+                snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
+                if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                    perror("Error: writen failed");
+                    continue;
+                }
+                
+                log_event("INFO", "Storage open file with code ");
+                break;
+                
             case DISCONNECT:  // closeConnection
                 // Un client ha richiesto la chiusura della connessione, lo comunico al dispatcher tramite pipe
-                // Preparo il buffer per la risposta
+                // Lo comunico al thread dispatcher tramite la pipe
                 memset(response, 0, REQUEST_LENGTH);
                 snprintf(response, REQUEST_LENGTH, "%d", CLIENT_LEFT);
                 if (writen((long)worker_args->pipe_output, (void*)response, PIPE_LEN) == -1) {
@@ -164,7 +205,7 @@ static void* worker(void* args) {
         }
     }
 
-    free(request);
+    //free(request);
     return NULL;
 }
 
