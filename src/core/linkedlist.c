@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <linkedlist.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 linked_list_t* linked_list_create() {
@@ -86,17 +87,30 @@ int linked_list_pop(linked_list_t* llist, int* data, front_back from) {
     return 0;
 }
 
-bool linked_list_find(linked_list_t* llist, int data){
+bool linked_list_find(linked_list_t* llist, int data) {
     // Controllo la validità degli argomenti e che la lista non sia vuota
-    if(!llist || !llist->first) return false;
+    if (!llist || !llist->first) return false;
     node_t* current_node = llist->first;
     // Scorro tutti gli elementi della lista
-    while(current_node->next){
+    while (current_node->next) {
         // Appena trovo un nodo con l'elemento da cercare, ritorno true
-        if(current_node->data == data)
+        if (current_node->data == data)
             return true;
         current_node = current_node->next;
     }
     // Se non lo trovo, alla fine ritorno false
     return false;
+}
+
+void linked_list_print(linked_list_t* llist) {
+    if (!llist) {
+        errno = EINVAL;
+        return;
+    }
+    node_t* node = (node_t*)llist->first;
+    printf("[%d]", node->data);
+    while ((node = node->next)) {
+        printf("->[%d]", node->data);
+    }
+    printf("\n");
 }

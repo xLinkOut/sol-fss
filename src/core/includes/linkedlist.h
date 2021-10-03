@@ -36,3 +36,6 @@ int linked_list_pop(linked_list_t* llist, int* data, front_back from);
 
 // * Cerca uno specifico nodo nella lista, ritorna true se lo trova, false altrimenti
 bool linked_list_find(linked_list_t* llist, int data);
+
+// * Visualizza la lista a schermo
+void linked_list_print(linked_list_t* llist);

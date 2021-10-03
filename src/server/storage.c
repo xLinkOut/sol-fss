@@ -119,8 +119,8 @@ void storage_file_destroy(storage_file_t* file) {
 
 void storage_file_print(storage_file_t* file){
     if(!file) return;
-    printf("%s (%d Bytes)\n", file->name, file->size);
-    printf("R:[%d], W:[%d]\n", file->readers->first->data, file->writer);
+    printf("%s (%d Bytes)\nWriter: [%d], Readers: ", file->name, file->size, file->writer);
+    linked_list_print(file->readers);
 }
 
 // ! APIs
@@ -135,6 +135,9 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     // Controllo se i flags O_CREATE e O_LOCK sono settati
     bool create_flag = IS_O_CREATE(flags);
     bool lock_flag = IS_O_LOCK(flags);
+
+    // TODO: Lock sull'intero storage se O_CREATE è settato
+
     // Controllo se il file esiste all'interno dello storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
     // Mantengo separata l'informazione sull'esistenza del file per leggibilità
@@ -187,6 +190,8 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     if(lock_flag) file->writer = client;
 
     storage_file_print(file);
+
+    // TODO: Rilasciare il lock sull'intero storage
 
     return 0;
 }
