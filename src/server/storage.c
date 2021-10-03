@@ -72,6 +72,34 @@ storage_file_t* storage_file_create(const char* name, const void* contents, size
         file->size = size;
     }
 
+    // Inizializzo le strutture relative al lock del file
+    // Accesso mutualmente esclusivo
+    if (pthread_mutex_init(&file->mutex, NULL) != 0) {
+        perror("Error: unable to init file mutex");
+        free((void*)file->name);
+        free((void*)file->contents);
+        free((void*)file);
+        return NULL;
+    }
+
+    // Variabile di condizione di attesa
+    if (pthread_cond_init(&file->wait, NULL) != 0) {
+        perror("Error: unable to init file wait condition variable");
+        pthread_mutex_destroy(&file->mutex);
+        free((void*)file->name);
+        free((void*)file->contents);
+        free((void*)file);
+        return NULL;
+    }
+
+    // Lettori/Scrittori in attesa
+    file->pending_readers = 0;
+    file->pending_writers = 0;
+    // Lettori che hanno aperto il file
+    file->readers = linked_list_create();
+    // Scrittore che ha la lock sul file
+    file->writer = 0;
+
     // Ritorno un puntatore al file
     return file;
 }

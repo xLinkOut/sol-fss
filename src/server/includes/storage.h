@@ -4,6 +4,7 @@
 #define _STORAGE_H_
 
 #include <icl_hash.h>
+#include <linkedlist.h>
 #include <pthread.h>
 
 // * Struttura dati dello storage
@@ -44,8 +45,8 @@ typedef struct StorageFile {
     pthread_cond_t wait;           // Condizione su cui lettori e scrittori aspettano
     unsigned int pending_readers;  // Lettori in attesa
     unsigned int pending_writers;  // Scrittori in attesa
-    // TODO: linked_list readers; // Lista di lettori attivi, ovvero che hanno aperto il file in lettura
-    int writer;  // Client che al momento ha il lock in scrittura sul file
+    linked_list_t* readers;        // Lista di lettori attivi, che hanno aperto il file in lettura
+    int writer;                    // Client che al momento ha il lock in scrittura sul file
 } storage_file_t;
 
 // * Inizializza uno storage e ritorna un puntatore ad esso
