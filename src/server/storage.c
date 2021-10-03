@@ -70,6 +70,10 @@ storage_file_t* storage_file_create(const char* name, const void* contents, size
         }
         memcpy(file->contents, contents, size);
         file->size = size;
+    }else{
+        // Se il contenuto non è specificato, inizializzo i campi di contenuto e dimensione
+        file->contents = NULL;
+        file->size = 0;
     }
 
     // Inizializzo le strutture relative al lock del file
@@ -111,6 +115,12 @@ void storage_file_destroy(storage_file_t* file) {
     free(file->name);
     free(file->contents);
     free(file);
+}
+
+void storage_file_print(storage_file_t* file){
+    if(!file) return;
+    printf("%s (%d Bytes)\n", file->name, file->size);
+    printf("R:[%d], W:[%d]\n", file->readers->first->data, file->writer);
 }
 
 // ! APIs
@@ -175,6 +185,8 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     linked_list_push(file->readers, client, BACK);
     // Controllo se aprire il file anche in scrittura
     if(lock_flag) file->writer = client;
+
+    storage_file_print(file);
 
     return 0;
 }
