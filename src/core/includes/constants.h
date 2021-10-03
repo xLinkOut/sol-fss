@@ -11,6 +11,9 @@
 #define IS_O_CREATE(mask) (mask & 1)
 #define IS_O_LOCK(mask) ((mask >> 1) & 1)
 
+// Lunghezza massima di un qualsiasi messaggio scambiato tra client e server
+#define MESSAGE_LENGTH 2048
+
 typedef enum RequestCode {
     OPEN,       // openFile
     READ,       // readFile
