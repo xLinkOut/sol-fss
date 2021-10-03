@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 // * Specifica se effettuare le operazioni di Push e Pop dalla testa o dalla coda della lista
 typedef enum FrontBack { FRONT, BACK } front_back;
@@ -32,3 +33,6 @@ int linked_list_push(linked_list_t* llist, int data, front_back where);
 
 // * Rimuove un nodo nella lista, dalla testa o dalla coda in accordo a from
 int linked_list_pop(linked_list_t* llist, int* data, front_back from);
+
+// * Cerca uno specifico nodo nella lista, ritorna true se lo trova, false altrimenti
+bool linked_list_find(linked_list_t* llist, int data);

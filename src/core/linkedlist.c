@@ -85,3 +85,18 @@ int linked_list_pop(linked_list_t* llist, int* data, front_back from) {
     llist->size--;
     return 0;
 }
+
+bool linked_list_find(linked_list_t* llist, int data){
+    // Controllo la validità degli argomenti e che la lista non sia vuota
+    if(!llist || !llist->first) return false;
+    node_t* current_node = llist->first;
+    // Scorro tutti gli elementi della lista
+    while(current_node->next){
+        // Appena trovo un nodo con l'elemento da cercare, ritorno true
+        if(current_node->data == data)
+            return true;
+        current_node = current_node->next;
+    }
+    // Se non lo trovo, alla fine ritorno false
+    return false;
+}
