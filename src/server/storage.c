@@ -147,19 +147,17 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     if (already_exists) {
         // * Il file esiste già nello storage, faccio gli adeguati controlli per ogni operazione
         // Controllo che lo stesso client non voglia aprire più volte lo stesso file
-        // if client in file->readers, return
+        if(linked_list_find(file->readers, client)){
+            errno = EEXIST;
+            return -1;
+        }
        
         // Controllo che il file non sia lockato da un altro client
-        // if file->writer != 0, return // ? Oppure aspetto?
-
-        // Apro il file in lettura
-        // linked_list_push(file->readers, client);
-        
-        // Controllo se aprire il file anche in scrittura
-        if(lock_flag){
-            // Sicuramente nessun altro ha la lock sul file, in quanto è stato appena creato
-            file->writer = client;
-        }
+        if(file->writer != 0 && file->writer != client){
+            // TODO: waiting
+            errno = EACCES;
+            return -1;
+        }        
     } else {
         // * Il file non esiste ancora nello storage, lo creo
         // Controllo che nello storage ci sia effettivamente spazio in termini di numero di files
@@ -171,16 +169,12 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         // Creo il file all'interno dello storage
         file = storage_file_create(pathname, NULL, 0);
         icl_hash_insert(storage->files, pathname, file);
-
-        // Apro il file in lettura
-        // linked_list_push(file->readers, client);
-
-        // Controllo se aprire il file anche in scrittura
-        if(lock_flag){
-            // Sicuramente nessun altro ha la lock sul file, in quanto è stato appena creato
-            file->writer = client;
-        }
     }
+
+    // Apro il file in lettura
+    linked_list_push(file->readers, client, BACK);
+    // Controllo se aprire il file anche in scrittura
+    if(lock_flag) file->writer = client;
 
     return 0;
 }
