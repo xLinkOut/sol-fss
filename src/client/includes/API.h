@@ -14,7 +14,10 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 // * Chiude la connessione associata al socket file sockname
 int closeConnection(const char* sockname);
 
-// * Richiede la creazione o l'apertura di un file
+// * Richiede la creazione e/o l'apertura del file <pathname>, in accordo a <flags>
 int openFile(const char* pathname, int flags);
+
+// * Richiede la chiusura del file <pathname> precedentemente aperto con openFile
+int closeFile(const char* pathname);
 
 #endif

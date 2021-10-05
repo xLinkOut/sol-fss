@@ -70,7 +70,7 @@ storage_file_t* storage_file_create(const char* name, const void* contents, size
         }
         memcpy(file->contents, contents, size);
         file->size = size;
-    }else{
+    } else {
         // Se il contenuto non è specificato, inizializzo i campi di contenuto e dimensione
         file->contents = NULL;
         file->size = 0;
@@ -117,8 +117,8 @@ void storage_file_destroy(storage_file_t* file) {
     free(file);
 }
 
-void storage_file_print(storage_file_t* file){
-    if(!file) return;
+void storage_file_print(storage_file_t* file) {
+    if (!file) return;
     printf("%s (%d Bytes)\nWriter: [%d], Readers: ", file->name, file->size, file->writer);
     linked_list_print(file->readers);
 }
@@ -160,21 +160,20 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     if (already_exists) {
         // * Il file esiste già nello storage, faccio gli adeguati controlli per ogni operazione
         // Controllo che lo stesso client non voglia aprire più volte lo stesso file
-        if(linked_list_find(file->readers, client)){
+        if (linked_list_find(file->readers, client)) {
             errno = EEXIST;
             return -1;
         }
-       
+
         // Controllo che il file non sia lockato da un altro client
-        if(file->writer != 0 && file->writer != client){
-            // TODO: waiting
+        if (file->writer != 0 && file->writer != client) {
             errno = EACCES;
             return -1;
-        }        
+        }
     } else {
         // * Il file non esiste ancora nello storage, lo creo
         // Controllo che nello storage ci sia effettivamente spazio in termini di numero di files
-        // ? In questo caso occorre far partire la procedura di replace?
+        // ? In questo caso occorre far partire la procedura di replace? Magari per espellere il file più piccolo?
         if (storage->number_of_files == storage->max_files) {
             errno = ENOSPC;
             return -1;
@@ -187,11 +186,48 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     // Apro il file in lettura
     linked_list_push(file->readers, client, BACK);
     // Controllo se aprire il file anche in scrittura
-    if(lock_flag) file->writer = client;
+    if (lock_flag) file->writer = client;
 
     storage_file_print(file);
 
     // TODO: Rilasciare il lock sull'intero storage
+
+    return 0;
+}
+
+int storage_close_file(storage_t* storage, const char* pathname, int client) {
+    // Controllo la validità degli argomenti
+    if (!storage || !pathname) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // TODO: Lock in lettura sullo storage
+    // Controllo se il file esiste all'interno dello storage
+    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    // TODO: Unlock storage
+
+    // Se non esiste, ritorno subito errore
+    if (!file) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    // Controllo che <client> abbia precedentemente eseguito la openFile
+    if (!linked_list_find(file->readers, client)) {
+        errno = ENOLCK;
+        return -1;
+    }
+
+    // TODO: Implementare una linked_list_remove(linked_list_t*, int)
+    // Rilascio il lock in lettura sul file
+    linked_list_pop(file->readers, &client, FRONT);
+
+    // Rilancio l'eventuale lock in scrittura sul file
+    // TODO: chiamare internamente la unlockFile()
+    if (file->writer != 0 && file->writer == client) {
+        file->writer = 0;
+    }
 
     return 0;
 }

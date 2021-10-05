@@ -107,6 +107,8 @@ int openFile(const char* pathname, int flags){
         return -1;
     }
 
+    printf("openFile sent\n");
+
     // Leggo la risposta
     memset(message_buffer, 0, REQUEST_LENGTH);
     if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
@@ -129,6 +131,54 @@ int openFile(const char* pathname, int flags){
         default:
             fprintf(stderr, "Something went wrong\n");
     }
-    
+
+    return -1;
+}
+
+int closeFile(const char* pathname){
+    // Controllo la validità degli argomenti
+    if(!pathname){
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Controllo che sia stata instaurata una connessione con il server
+    if(client_socket == -1){
+        errno = ENOTCONN;
+        return -1;
+    }
+
+    // Preparo la richiesta da inviare
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    snprintf(message_buffer, REQUEST_LENGTH, "%d %s", CLOSE, pathname);
+    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+
+    printf("closeFile sent\n");
+
+    // Leggo la risposta
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+
+    // Interpreto (il codice del)la risposta ricevuta
+    response_code status;
+    if(sscanf(message_buffer, "%d", &status) != 1){
+        errno = EBADMSG;
+        return -1;
+    }
+
+    // TODO: if(VERBOSE)
+    switch(status){
+        case SUCCESS:
+            printf("closeFile success\n");
+            return 0;
+            break;
+        default:
+            fprintf(stderr, "Something went wrong\n");
+    }
+
     return -1;
 }
