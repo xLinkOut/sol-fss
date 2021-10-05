@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <constants.h>
+#include <sys/stat.h>
 
 // Imposto il socket con un valore negativo, e.g. 'non connesso'
 int client_socket = -1;
@@ -133,6 +134,56 @@ int openFile(const char* pathname, int flags){
     }
 
     return -1;
+}
+
+int writeFile(const char* pathname, const char* dirname){
+    // Controllo la validità degli argomenti
+    if(!pathname){
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Controllo che sia stata instaurata una connessione con il server
+    if(client_socket == -1){
+        errno = ENOTCONN;
+        return -1;
+    }
+    
+    /* Schema:
+        Client: invia pathname e dimensione del file da salvare nello storage
+        Server: determina se è necessario espellere uno o più file per liberare spazio
+        Server: eventualmente, invia al client i file espulsi da salvare
+        Client: se dirname è stato specificato, salva li i file espulsi dallo storage
+        Client: al termine, invia il file da salvare
+    */
+    
+    // Controllo che il file esista e che dispongo dei permessi necessari per poterlo leggere
+    if (access(pathname, R_OK) == -1) {
+        errno = EINVAL;
+        return -1;
+    }
+    // Apro il file
+    FILE* file = fopen(pathname, "r");
+    if(!file) return -1; 
+
+    // Determino la dimensione del file e la invio al server
+    struct stat file_stat; // file_stat.st_size è la dimensione del file
+    if(stat(pathname, &file_stat) < 0){
+        fclose(file);
+        return -1;
+    }
+
+    // Preparo la richiesta da inviare
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    snprintf(message_buffer, REQUEST_LENGTH, "%d %s %lld", WRITE, pathname, file_stat.st_size);
+    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+
+    printf("writeFile sent with size %lld\n", file_stat.st_size);
+    
+
+    return 0;
 }
 
 int closeFile(const char* pathname){
