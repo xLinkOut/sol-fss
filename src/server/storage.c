@@ -28,7 +28,7 @@ storage_t* storage_create(size_t max_files, size_t max_capacity) {
     // Inizializzo o salvo gli altri parametri
     storage->number_of_files = 0;
     storage->max_files = max_files;
-    storage->capacity = 0;
+    storage->capacity = max_capacity;
     storage->max_capacity = max_capacity;
 
     // Ritorno un puntatore allo storage
@@ -194,6 +194,48 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
 
     return 0;
 }
+
+int storage_write_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int client){
+    // Controllo la validità degli argomenti
+    if (!storage || !pathname || !contents || size <= 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Controllo che la dimensione del file non sia maggiore della capacità massima dello storage
+    if(size > storage->max_capacity){
+        errno = EFBIG;
+        return -1;
+    }
+    
+    // Se la dimensione del file è più grande della capacità disponibile al momento
+    if(size > storage->capacity){
+        // Faccio partire la procedura di rimpiazzo
+        // TODO:
+        // E invio al client i file espulsi
+    }
+
+    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    // Se non esiste, ritorno subito errore
+    if (!file) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    // Controllo che <client> abbia precedentemente aperto il file in scrittura
+    if(file->writer != client){
+        errno = EPERM;
+        return -1;
+    }
+
+    // TODO: se il file non è vuoto, devo cancellare il vecchio contenuto prima di scrivere il nuovo
+    file->contents = contents;
+    file->size = size;
+
+    return 0;
+
+}
+
 
 int storage_close_file(storage_t* storage, const char* pathname, int client) {
     // Controllo la validità degli argomenti

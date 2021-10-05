@@ -65,6 +65,9 @@ void storage_file_destroy(storage_file_t* file);
 // * Crea e/o apre il file <pathname> in lettura ed eventualmente in scrittura, in accordo a <flags>
 int storage_open_file(storage_t* storage, const char* pathname, int flags, int client);
 
+// * Scrive nello storage il file <pathname> ed il suo contenuto <contents>
+int storage_write_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int client);
+
 // * Chiude il file <pathname> aperto in precedenza con storage_open_file da <client>
 int storage_close_file(storage_t* storage, const char* pathname, int client);
 
