@@ -119,7 +119,7 @@ void storage_file_destroy(storage_file_t* file) {
 
 void storage_file_print(storage_file_t* file) {
     if (!file) return;
-    printf("%s (%d Bytes)\nWriter: [%d], Readers: ", file->name, file->size, file->writer);
+    printf("%s (%zd Bytes)\nWriter: [%d], Readers: ", file->name, file->size, file->writer);
     linked_list_print(file->readers);
 }
 
@@ -189,6 +189,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     if (lock_flag) file->writer = client;
 
     storage_file_print(file);
+    icl_hash_dump(stdout, storage->files);
 
     // TODO: Rilasciare il lock sull'intero storage
 
@@ -202,40 +203,32 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
         return -1;
     }
 
-    // Controllo che la dimensione del file non sia maggiore della capacità massima dello storage
-    if(size > storage->max_capacity){
-        errno = EFBIG;
-        return -1;
-    }
-    
-    // Se la dimensione del file è più grande della capacità disponibile al momento
-    if(size > storage->capacity){
-        // Faccio partire la procedura di rimpiazzo
-        // TODO:
-        // E invio al client i file espulsi
-    }
-
+    // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
-    // Se non esiste, ritorno subito errore
+    // Tutti i controlli del caso dovrebbero essere stati eseguiti dalla storage_eject_file
+    // Tuttavia, effettuo comunque un controllo
     if (!file) {
         errno = ENOENT;
         return -1;
     }
 
-    // Controllo che <client> abbia precedentemente aperto il file in scrittura
-    if(file->writer != client){
+    // Controllo nuovamente che il file sia stato aperto in scrittura dal client
+    if(file->writer != 0 && file->writer != client){
         errno = EPERM;
         return -1;
     }
 
+    // Aggiorno il contenuto del file
     // TODO: se il file non è vuoto, devo cancellare il vecchio contenuto prima di scrivere il nuovo
+    free(file->contents); // TODO: devo effettivamente farlo?
     file->contents = contents;
     file->size = size;
 
+    // Aggiorno le informazioni dello storage
+    storage->capacity += size;
+    
     return 0;
-
 }
-
 
 int storage_close_file(storage_t* storage, const char* pathname, int client) {
     // Controllo la validità degli argomenti
@@ -269,6 +262,49 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
     // TODO: chiamare internamente la unlockFile()
     if (file->writer != 0 && file->writer == client) {
         file->writer = 0;
+    }
+
+    return 0;
+}
+
+int storage_eject_file(storage_t* storage, const char* pathname, size_t size, int client, storage_file_t** victims){
+    // Controllo la validità degli argomenti
+    if(!storage || !pathname || size <= 0 || !victims){
+        errno = EINVAL;
+        return -1;
+    }
+
+    // TODO: storage lock
+
+    // Controllo che la dimensione del file non sia maggiore dell'intero storage
+    if(size > storage->max_capacity){
+        errno = ENOSPC;
+        return -1;
+    }
+
+    // Controllo che il file esista nello storage (e.g. è stato creato con storage_open_file)
+    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    if(!file){
+        errno = ENOENT;
+        return -1;
+    }
+
+    // Controllo che il file sia stato aperto in scrittura dal client
+    if(file->writer != 0 && file->writer != client){
+        errno = EPERM;
+        return -1;
+    }
+
+
+    // Controllo che ci sia spazio libero a sufficienza per salvare il file
+    if(size > storage->capacity){
+        // Se non c'è spazio, decido qui quali file espellere dallo storage
+        
+        int victims_no = 0; // Numero dei file espulsi dallo storage
+        
+        // TODO: replacement mechanism
+        
+        return victims_no;
     }
 
     return 0;

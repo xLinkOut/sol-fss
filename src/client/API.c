@@ -149,39 +149,135 @@ int writeFile(const char* pathname, const char* dirname){
         return -1;
     }
     
+    // Controllo che il file esista e che dispongo dei permessi necessari per poterlo leggere
+    if (access(pathname, R_OK) == -1) {
+        errno = EPERM;
+        return -1;
+    }
+    
     /* Schema:
         Client: invia pathname e dimensione del file da salvare nello storage
+        Server: effettua i controlli necessari sui parametri:
+            File <pathname> presente nello storage √
+            Client ha i diritti di scrittura sul file √
+            Dimensione non superiore alla massima dello storage √
+            Lo storage ha spazio a sufficienza per contenere il file √
+                No? Faccio partire il procedimento di replace
         Server: determina se è necessario espellere uno o più file per liberare spazio
         Server: eventualmente, invia al client i file espulsi da salvare
         Client: se dirname è stato specificato, salva li i file espulsi dallo storage
         Client: al termine, invia il file da salvare
     */
     
-    // Controllo che il file esista e che dispongo dei permessi necessari per poterlo leggere
-    if (access(pathname, R_OK) == -1) {
-        errno = EINVAL;
-        return -1;
-    }
     // Apro il file
     FILE* file = fopen(pathname, "r");
     if(!file) return -1; 
 
     // Determino la dimensione del file e la invio al server
-    struct stat file_stat; // file_stat.st_size è la dimensione del file
-    if(stat(pathname, &file_stat) < 0){
+    struct stat file_stat; // * file_stat.st_size è la dimensione del file
+    if(stat(pathname, &file_stat) == -1){
         fclose(file);
         return -1;
     }
 
-    // Preparo la richiesta da inviare
+    // Invio al server la richiesta di WRITE, il pathname e la dimensione del file
     memset(message_buffer, 0, REQUEST_LENGTH);
     snprintf(message_buffer, REQUEST_LENGTH, "%d %s %lld", WRITE, pathname, file_stat.st_size);
     if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
         return -1;
     }
 
-    printf("writeFile sent with size %lld\n", file_stat.st_size);
+    // Attendo di ricevere il numero di file espulsi
+    int victims_no = 0;
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+    if(sscanf(message_buffer, "%d", &victims_no) != 1){
+        errno = EBADMSG;
+        return -1;
+    }
     
+    // Ciclo fino a ricevere tutti i file espulsi
+    char victim_pathname[MESSAGE_LENGTH]; 
+    size_t size = 0;
+    char* token = NULL;
+    char* strtok_status = NULL;
+
+    while(victims_no > 0){
+        // Leggo il pathname e la dimensione del file espulso
+        memset(message_buffer, 0, REQUEST_LENGTH);
+        memset(victim_pathname, 0, MESSAGE_LENGTH);
+        if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+            return -1;
+        }
+        // Pathname
+        token = strtok_r(message_buffer, " ", &strtok_status);
+        if (!token || sscanf(token, "%s", victim_pathname) != 1) {
+            errno = EBADMSG;
+            return -1;
+        }
+        // Size
+        token = strtok_r(NULL, " ", &strtok_status);
+        if (!token || sscanf(token, "%zd", &size) != 1) {
+            errno = EBADMSG;
+            return -1;
+        }
+        
+        // Alloco spazio per il file
+        void* contents = malloc(size);
+        if(!contents){
+            perror("malloc");
+            return -1;
+        }
+        memset(contents, 0, size);
+        if(readn((long)client_socket, (void*)contents, size) == -1){
+            return -1;
+        }
+
+        // Se il client ha specificato una cartella in cui salvare i file espulsi
+        if(dirname){
+            FILE* output_file = NULL;
+            char* abs_path[4096]; // TODO: define
+            snprintf(abs_path, 4096, strrchr(dirname, '/') ? "%s%s" : "%s/%s", dirname, victim_pathname);
+            output_file = fopen(abs_path, "w");
+            if(!output_file) return -1;
+            if(fputs(contents, output_file) == EOF){
+                fclose(output_file);
+                return -1;
+            }
+            if(fclose(output_file) == -1) return -1;
+        }
+
+        free(contents);
+        victims_no--;
+    }
+
+    // Alloco la memoria necessaria per leggere il file
+    void* contents = malloc(file_stat.st_size);
+    // Leggo il contenuto del file come un unico blocco di dimensione st_size
+    fread(contents, file_stat.st_size, 1, file);
+
+    // Invio il contenuto del file che voglio scrivere
+    if (writen((long)client_socket, (void*)contents, file_stat.st_size) == -1) {
+        perror("Error: writen failed");
+        return -1;
+    }
+
+    // Leggo la risposta
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+
+    // Interpreto (il codice del)la risposta ricevuta
+    response_code status;
+    if(sscanf(message_buffer, "%d", &status) != 1){
+        errno = EBADMSG;
+        return -1;
+    }
+
+    printf("Exit code %d\n", status);
 
     return 0;
 }
