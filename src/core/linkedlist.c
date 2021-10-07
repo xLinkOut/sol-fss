@@ -92,7 +92,7 @@ bool linked_list_find(linked_list_t* llist, int data) {
     if (!llist || !llist->first) return false;
     node_t* current_node = llist->first;
     // Scorro tutti gli elementi della lista
-    while (current_node->next) {
+    while (current_node) {
         // Appena trovo un nodo con l'elemento da cercare, ritorno true
         if (current_node->data == data)
             return true;
@@ -103,10 +103,7 @@ bool linked_list_find(linked_list_t* llist, int data) {
 }
 
 void linked_list_print(linked_list_t* llist) {
-    if (!llist) {
-        errno = EINVAL;
-        return;
-    }
+    if (!llist || !llist->first) return;
     node_t* node = (node_t*)llist->first;
     printf("[%d]", node->data);
     while ((node = node->next)) {
