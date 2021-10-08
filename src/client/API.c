@@ -376,6 +376,127 @@ int writeFile(const char* pathname, const char* dirname){
     return -1;
 }
 
+int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname){
+    // Controllo la validità degli argomenti
+    if(!pathname){
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Controllo che sia stata instaurata una connessione con il server
+    if(client_socket == -1){
+        errno = ENOTCONN;
+        return -1;
+    }
+
+    // Invio al server la richiesta di APPEND, il pathname e la dimensione del file
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    snprintf(message_buffer, REQUEST_LENGTH, "%d %s %lld", APPEND, pathname, size);
+    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+
+    printf("appendToFile sent\n");
+
+    // Attendo di ricevere il numero di file espulsi
+    int victims_no = 0;
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+    if(sscanf(message_buffer, "%d", &victims_no) != 1){
+        errno = EBADMSG;
+        return -1;
+    }
+    
+    // Ciclo fino a ricevere tutti i file espulsi
+    char victim_pathname[MESSAGE_LENGTH]; 
+    size_t v_size = 0;
+    char* token = NULL;
+    char* strtok_status = NULL;
+
+    while(victims_no > 0){
+        // Leggo il pathname e la dimensione del file espulso
+        memset(message_buffer, 0, REQUEST_LENGTH);
+        memset(victim_pathname, 0, MESSAGE_LENGTH);
+        if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+            return -1;
+        }
+        // Pathname
+        token = strtok_r(message_buffer, " ", &strtok_status);
+        if (!token || sscanf(token, "%s", victim_pathname) != 1) {
+            errno = EBADMSG;
+            return -1;
+        }
+        // Size
+        token = strtok_r(NULL, " ", &strtok_status);
+        if (!token || sscanf(token, "%zd", &v_size) != 1) {
+            errno = EBADMSG;
+            return -1;
+        }
+        
+        // Alloco spazio per il file
+        void* contents = malloc(v_size);
+        if(!contents){
+            perror("malloc");
+            return -1;
+        }
+        memset(contents, 0, v_size);
+        if(readn((long)client_socket, (void*)contents, v_size) == -1){
+            return -1;
+        }
+
+        // Se il client ha specificato una cartella in cui salvare i file espulsi
+        if(dirname){
+            FILE* output_file = NULL;
+            char* abs_path[4096]; // TODO: define
+            snprintf(abs_path, 4096, strrchr(dirname, '/') ? "%s%s" : "%s/%s", dirname, victim_pathname);
+            output_file = fopen(abs_path, "w");
+            if(!output_file) return -1;
+            if(fputs(contents, output_file) == EOF){
+                fclose(output_file);
+                return -1;
+            }
+            if(fclose(output_file) == -1) return -1;
+        }
+
+        free(contents);
+        victims_no--;
+    }
+    
+    // Invio il contenuto del file che voglio scrivere
+    if (writen((long)client_socket, (void*)buf, size) == -1) {
+        perror("Error: writen failed");
+        return -1;
+    }
+
+    // Leggo la risposta
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+
+    // Interpreto (il codice del)la risposta ricevuta
+    response_code status;
+    if(sscanf(message_buffer, "%d", &status) != 1){
+        errno = EBADMSG;
+        return -1;
+    }
+
+    // TODO: if(VERBOSE)
+    switch(status){
+        case SUCCESS:
+            printf("appendToFile success\n");
+            return 0;
+            break;
+        default:
+            fprintf(stderr, "Something went wrong\n");
+    }
+
+    return -1;
+
+}
+
 int closeFile(const char* pathname){
     // Controllo la validità degli argomenti
     if(!pathname){

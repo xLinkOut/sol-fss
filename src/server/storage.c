@@ -256,6 +256,41 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     return 0;
 }
 
+int storage_append_to_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int client){
+    // Controllo la validità degli argomenti
+    if (!storage || !pathname || !contents || size <= 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Recupero il file dallo storage
+    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    // Tutti i controlli del caso dovrebbero essere stati eseguiti dalla storage_eject_file
+    // Tuttavia, effettuo comunque un controllo
+    if (!file) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    // Controllo nuovamente che il file sia stato aperto in scrittura dal client
+    if(file->writer != 0 && file->writer != client){
+        errno = EPERM;
+        return -1;
+    }
+
+    // Amplio la memoria allocata per il file
+    void* updated_contents = realloc(file->contents, file->size + size);
+    if(!updated_contents) return -1;
+    file->contents = updated_contents;
+    // Aggiungo <contents> partendo dalla fine di <file->contents>
+    memcpy(file->contents + file->size, contents, size);
+    // Aggiorno la dimensione del file
+    file->size += size;
+    // todo update storage size
+    return 0;
+
+}
+
 int storage_close_file(storage_t* storage, const char* pathname, int client) {
     // Controllo la validità degli argomenti
     if (!storage || !pathname) {

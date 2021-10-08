@@ -311,6 +311,86 @@ static void* worker(void* args) {
                 log_event("INFO", "Storage write file with code ");
                 break;
 
+            case APPEND: // ! appendToFile: APPEND <str:pathname> <int:size>
+                // TODO: redefinition of file_size, victims[], victims_no, contents not allowed
+                // Parso il pathname del file
+                token = strtok_r(NULL, " ", &strtok_status);
+                memset(pathname, 0, MESSAGE_LENGTH);
+                if (!token || sscanf(token, "%s", pathname) != 1) {
+                    fprintf(stderr, "Error: bad request\n");
+                    break;
+                }
+
+                // Parso la dimensione del file
+                file_size = 0;
+                token = strtok_r(NULL, " ", &strtok_status);
+                if (!token || sscanf(token, "%zd", &file_size) != 1) {
+                    fprintf(stderr, "Error: bad request\n");
+                    break;
+                }
+
+                printf("APPEND: %s %zd\n", pathname, file_size);
+
+                // Avendo la dimensione del file, determino se è necessario espellere
+                // uno o più files dallo storage per liberare spazio per il nuovo file
+                // TODO: Generalizzare /core/linked_list.h rendendo il campo <data> di tipo 'void*'
+                victims[10]; // TODO: utilizzare qui una linked list di storage_file_t*
+                victims_no = storage_eject_file(worker_args->storage, pathname, file_size, fd_ready, victims);
+                if(victims_no == -1){
+                    perror("Error: failed to eject files");
+                    break;
+                }
+                
+                // Invio al client il numero di file espulsi, eventualmente zero
+                memset(response, 0, MESSAGE_LENGTH);
+                snprintf(response, MESSAGE_LENGTH, "%d", victims_no);
+                if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                    perror("Error: writen failed");
+                    break;
+                }
+                
+                // Se ho dovuto espellere dei files, li invio al client
+                for(int i=0; i<victims_no; i++){
+                    //printf("%d %d %s %zd\n", victims_no, i, victims[i]->name, victims[i]->size);
+                    // Invio prima il pathname e la dimensione del file
+                    memset(response, 0, MESSAGE_LENGTH);
+                    snprintf(response, MESSAGE_LENGTH, "%s %zd", victims[i]->name, victims[i]->size);
+                    if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                        perror("Error: writen failed");
+                        break;
+                    }
+                    // Quindi invio il contenuto del file
+                    if (writen((long)fd_ready, (void*)victims[i]->contents, victims[i]->size) == -1) {
+                        perror("Error: writen failed");
+                        break;
+                    }
+                }
+
+                // Preparo il necessario per ricevere il contenuto da aggiungere al file
+                // Conosco la dimensione, quindi posso allocare lo spazio necessario
+                contents = malloc(file_size);
+                memset(contents, 0, file_size);
+                // Leggo e scrivo il contenuto del file
+                if(readn((long)fd_ready, (void*)contents, file_size) == -1){
+                    perror("Error: readn failed");
+                    free(contents);
+                    break;
+                }
+
+                // Da qui in su, è identica alla WRITE
+
+                // Scrivo il contenuto del file all'intero dello storage
+                api_exit_code = storage_append_to_file(worker_args->storage, pathname, contents, file_size, fd_ready);
+                // Preparo il buffer per la risposta
+                memset(response, 0, MESSAGE_LENGTH);
+                snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
+                if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                    perror("Error: writen failed");
+                    break;
+                }
+
+                break;
+
             case CLOSE:  // * closeFile: CLOSE <str:pathname>
                 // Parso il pathname dalla richiesta
                 token = strtok_r(NULL, " ", &strtok_status);

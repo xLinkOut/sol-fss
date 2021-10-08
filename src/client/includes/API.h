@@ -23,6 +23,9 @@ int readFile(const char* pathname, void** buf, size_t* size);
 // * Scrive il file <pathname> sul server, e salva in <dirname> eventuali file espulsi
 int writeFile(const char* pathname, const char* dirname);
 
+// * Aggiunge <buf> di dimensione <size> al file <pathname>, salva in <dirname> eventuali file espulsi
+int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname);
+
 // * Richiede la chiusura del file <pathname> precedentemente aperto con openFile
 int closeFile(const char* pathname);
 
