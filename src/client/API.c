@@ -136,6 +136,90 @@ int openFile(const char* pathname, int flags){
     return -1;
 }
 
+int readFile(const char* pathname, void** buf, size_t* size){
+    // Controllo la validità degli argomenti
+    if(!pathname || !buf || !size){
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Controllo che sia stata instaurata una connessione con il server
+    if(client_socket == -1){
+        errno = ENOTCONN;
+        return -1;
+    }
+
+    // Invio al server la richiesta di READ
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    snprintf(message_buffer, REQUEST_LENGTH, "%d %s", READ, pathname);
+    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+
+    printf("readFile sent\n");
+
+    // Ricevo dal server un messaggio di conferma e, se il file è stato trovato, la sua dimensione
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+    char* strtok_status = NULL;
+    char* token = strtok_r(message_buffer, " ", &strtok_status);
+    if (!token) return -1;
+    int result = 0;
+    if (sscanf(token, "%d", &result) != 1) {
+        return -1;
+    }
+    if(result == 0){
+        errno = ENOENT;
+        return -1;
+    }else if(result == -1){
+        errno = EPERM;
+        return -1;
+    }
+
+    // result = 1 => file trovata e permessi ok
+    token = strtok_r(NULL, " ", &strtok_status);
+    size_t size_from_server = 0;
+    if (sscanf(token, "%zd", &size_from_server) != 1) {
+        return -1;
+    }
+    *size = size_from_server;
+    //printf("%d %zd\n", result, size_from_server);
+
+    // Ricevo il file dal server
+    *buf = malloc(*size);
+    memset(*buf, 0, *size);
+    if(readn((long)client_socket, *buf, *size) == -1){
+        return -1;
+    }
+    //printf("\t%s\n", (char*)*buf);
+     // Leggo la risposta
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+
+    // Interpreto (il codice del)la risposta ricevuta
+    response_code status;
+    if(sscanf(message_buffer, "%d", &status) != 1){
+        errno = EBADMSG;
+        return -1;
+    }
+
+    // TODO: if(VERBOSE)
+    switch(status){
+        case SUCCESS:
+            printf("readFile success\n");
+            return 0;
+            break;
+        default:
+            fprintf(stderr, "Something went wrong\n");
+    }
+
+    return -1;
+}
+
 int writeFile(const char* pathname, const char* dirname){
     // Controllo la validità degli argomenti
     if(!pathname){
@@ -186,6 +270,8 @@ int writeFile(const char* pathname, const char* dirname){
     if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
         return -1;
     }
+
+    printf("writeFile sent\n");
 
     // Attendo di ricevere il numero di file espulsi
     int victims_no = 0;
@@ -277,9 +363,17 @@ int writeFile(const char* pathname, const char* dirname){
         return -1;
     }
 
-    printf("Exit code %d\n", status);
+    // TODO: if(VERBOSE)
+    switch(status){
+        case SUCCESS:
+            printf("writeFile success\n");
+            return 0;
+            break;
+        default:
+            fprintf(stderr, "Something went wrong\n");
+    }
 
-    return 0;
+    return -1;
 }
 
 int closeFile(const char* pathname){
