@@ -196,6 +196,32 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     return 0;
 }
 
+int storage_read_file(storage_t* storage, const char* pathname, void** contents, size_t* size, int client){
+    // Controllo la validità degli argomenti
+    if (!storage || !pathname || !contents) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Recupero il file dallo storage
+    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    // Controllo se il file esiste all'interno dello storage
+    if (!file) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    // Controllo che il client abbia aperto il file in lettura
+    if (!linked_list_find(file->readers, client)) {
+        errno = EPERM;
+        return -1;
+    }
+    //printf("r: %p\n", file->contents);
+    *contents = file->contents;
+    *size = file->size;
+    return 0;
+}
+
 int storage_write_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int client){
     // Controllo la validità degli argomenti
     if (!storage || !pathname || !contents || size <= 0) {

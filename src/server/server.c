@@ -128,7 +128,7 @@ static void* worker(void* args) {
         }
 
         // A questo punto sono sicuro di avere un fd valido
-        printf("Worker on %d\n", fd_ready);
+        //printf("Worker on %d\n", fd_ready);
 
         // Pulisco tracce di eventuali richieste precedenti
         memset(request, 0, REQUEST_LENGTH);
@@ -140,7 +140,7 @@ static void* worker(void* args) {
 
         // * Faccio il parsing della richiesta
         // Il formato atteso è: <int:codice_richiesta> <string:parametri>[,<string:parametri>]
-        printf("Richiesta: %s\n", request);
+        //printf("Richiesta: %s\n", request);
         // Uso lo spazio come delimitatore
         char* token = strtok_r(request, " ", &strtok_status);
         // Se scopro essere una stringa vuota, non vado oltre
@@ -185,6 +185,54 @@ static void* worker(void* args) {
                 log_event("INFO", "Storage open file with code ");
                 break;
 
+            case READ: // ! readFile: READ <str:pathname>
+                // Parso il pathname dalla richiesta
+                token = strtok_r(NULL, " ", &strtok_status);
+                memset(pathname, 0, MESSAGE_LENGTH);
+                if (!token || sscanf(token, "%s", pathname) != 1) {
+                    fprintf(stderr, "Error: bad request\n");
+                    break;
+                }
+
+                printf("READ: %s\n", pathname);
+                
+                // Eseguo la API call
+                void* f_contents = NULL;
+                size_t size = 0;
+                api_exit_code = storage_read_file(worker_args->storage, pathname, &f_contents, &size, fd_ready);
+                
+                int code = 1;
+                if(api_exit_code == -1){
+                    if(errno == ENOENT) code = 0;
+                    else if (errno == EPERM) code = -1;
+                }
+                //printf("readfile exit code %d\n", api_exit_code);
+
+                // Invio al client il codice di ritorno e, eventualmente, la dimensione del file
+                memset(response, 0, MESSAGE_LENGTH);
+                snprintf(response, MESSAGE_LENGTH, "%d %zd", code, code == 1 ? size : 0);
+                if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                    perror("Error: writen failed");
+                    break;
+                }
+                
+                if(api_exit_code == -1) break;
+                if (writen((long)fd_ready, f_contents, size) == -1) {
+                    perror("Error: writen failed");
+                    break;
+                }
+
+                // TODO: fix this, usare direttamente code come codice risposta
+                memset(response, 0, MESSAGE_LENGTH);
+                snprintf(response, MESSAGE_LENGTH, "%d", 0);
+                if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                    perror("Error: writen failed");
+                    break;
+                }
+
+                log_event("INFO", "Storage read file with code ");
+                break;
+                
             case WRITE: // ! writeFile: WRITE <str:pathname> <int:file_size>
                 // Parso il pathname del file
                 token = strtok_r(NULL, " ", &strtok_status);
@@ -660,9 +708,9 @@ int main(int argc, char* argv[]) {
                     if (client_socket > fd_num) fd_num = client_socket;
                     // Aggiorno il contatore dei clients attivi
                     active_clients++;
-                    printf("Active clients: %d\n", active_clients);
+                    //printf("Active clients: %d\n", active_clients);
                     log_event("INFO", "Accepted incoming connection");
-                    printf("Info: accepted incoming connection on %d\n", client_socket);
+                    //printf("Info: accepted incoming connection on %d\n", client_socket);
 
                 } else if (fd == pipe_workers[0]) {
                     // * Nuova comunicazione da un thread worker
@@ -681,7 +729,7 @@ int main(int argc, char* argv[]) {
                         FD_SET(pipe_message, &set);
                         if (pipe_message > fd_num) fd_num = pipe_message;
                     }
-                    printf("Active clients: %d\n", active_clients);
+                    //printf("Active clients: %d\n", active_clients);
 
                 } else {
                     // * Nuovo task da parte di un client connesso
@@ -691,7 +739,7 @@ int main(int argc, char* argv[]) {
                     FD_CLR(fd, &set);
                     //if(fd == fd_num) fd_num--;
                     log_event("INFO", "Nuovo task da x aggiunto in coda");
-                    printf("Aggiunto %d nella queue\n", fd);
+                    //printf("Aggiunto %d nella queue\n", fd);
                 }
             }
         }
