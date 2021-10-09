@@ -26,6 +26,9 @@ int writeFile(const char* pathname, const char* dirname);
 // * Aggiunge <buf> di dimensione <size> al file <pathname>, salva in <dirname> eventuali file espulsi
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname);
 
+// * Richiede il lock in scrittura sul file <pathname>
+int lockFile(const char* pathname);
+
 // * Richiede la chiusura del file <pathname> precedentemente aperto con openFile
 int closeFile(const char* pathname);
 

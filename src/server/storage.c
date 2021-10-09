@@ -291,6 +291,45 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
 
 }
 
+int storage_lock_file(storage_t* storage, const char* pathname, int client){
+    // Controllo la validità degli argomenti
+    if (!storage || !pathname) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Recupero il file dallo storage
+    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    // Tutti i controlli del caso dovrebbero essere stati eseguiti dalla storage_eject_file
+    // Tuttavia, effettuo comunque un controllo
+    if (!file) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    // Se il file è gia aperto in scrittura per il client che ha effettuato la richiesta, ritorno immediatamente
+    if(file->writer == client) return 0;
+
+    // Se il file non è stato precedentemente aperto, almeno in lettura, dal client, non posso aprirlo in scrittura
+    if(!linked_list_find(file->readers, client)) return -1;
+
+    // Se il file non è stato aperto in scrittura da nessun client (= non è bloccato in scrittura)
+    if(file->writer == 0){
+        // Imposto il lock in scrittura sul file per il client 
+        file->writer = client;
+    }else{
+        // Se il file è lockato da un altro client, aspetto che venga rilasciato
+        // e solo successivamente acquisisco la lock
+        // ! 
+        // TODO: variabile di condizione sul lock su cui aspettare
+        file->writer = client;
+    }
+    
+    storage_file_print(file);
+
+    return 0;
+}
+
 int storage_close_file(storage_t* storage, const char* pathname, int client) {
     // Controllo la validità degli argomenti
     if (!storage || !pathname) {
@@ -324,6 +363,8 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
     if (file->writer != 0 && file->writer == client) {
         file->writer = 0;
     }
+
+    storage_file_print(file);
 
     return 0;
 }
