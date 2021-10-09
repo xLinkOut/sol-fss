@@ -78,6 +78,9 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
 // * Se il file è già lockato da un altro client, aspetta che questo lo rilasci
 int storage_lock_file(storage_t* storage, const char* pathname, int client);
 
+// * Rilascia il lock in scrittura del file <pathname> per <client>
+int storage_unlock_file(storage_t* storage, const char* pathname, int client);
+
 // * Chiude il file <pathname> aperto in precedenza con storage_open_file da <client>
 int storage_close_file(storage_t* storage, const char* pathname, int client);
 

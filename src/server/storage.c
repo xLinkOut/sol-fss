@@ -300,8 +300,7 @@ int storage_lock_file(storage_t* storage, const char* pathname, int client){
 
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
-    // Tutti i controlli del caso dovrebbero essere stati eseguiti dalla storage_eject_file
-    // Tuttavia, effettuo comunque un controllo
+    // Controllo che il file esista
     if (!file) {
         errno = ENOENT;
         return -1;
@@ -328,6 +327,38 @@ int storage_lock_file(storage_t* storage, const char* pathname, int client){
     storage_file_print(file);
 
     return 0;
+}
+
+int storage_unlock_file(storage_t* storage, const char* pathname, int client){
+    // Controllo la validità degli argomenti
+    if (!storage || !pathname) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Recupero il file dallo storage
+    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    // Controllo che il file esista
+    if (!file) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    if(file->writer == 0 || file->writer != client){
+        // Il file non è attualmente lockato in scrittura, oppure
+        // la lock è detenuta da un client diverso
+        errno = ENOLCK;
+        return -1;
+    }
+
+    // A questo punto, file->writer sarà pari a client, per costruzione, 
+    // ovvero client ha in precedenza aperto il file in scrittura
+    // Rilascio quindi la lock
+    file->writer = 0;
+    storage_file_print(file);
+    // Il file rimarrà aperto in lettura
+    return 0;
+
 }
 
 int storage_close_file(storage_t* storage, const char* pathname, int client) {
