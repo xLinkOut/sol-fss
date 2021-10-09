@@ -465,6 +465,30 @@ static void* worker(void* args) {
                 log_event("INFO", "Storage close file with code ");
                 break;
 
+            case REMOVE: // ! removeFile: REMOVE <str:pathname>
+                // Parso il pathname dalla richiesta
+                token = strtok_r(NULL, " ", &strtok_status);
+                memset(pathname, 0, MESSAGE_LENGTH);
+                if (!token || sscanf(token, "%s", pathname) != 1) {
+                    fprintf(stderr, "Error: bad request\n");
+                    break;
+                }
+
+                printf("REMOVE: %s\n", pathname);
+
+                // Eseguo la API call
+                api_exit_code = storage_remove_file(worker_args->storage, pathname, fd_ready);
+                // Preparo il buffer per la risposta
+                memset(response, 0, MESSAGE_LENGTH);
+                snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
+                if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                    perror("Error: writen failed");
+                    break;
+                }
+
+                log_event("INFO", "Storage remove file with code ");
+                break;
+                
             case DISCONNECT:  // * closeConnection
                 // Un client ha richiesto la chiusura della connessione
                 // Lo comunico al thread dispatcher tramite la pipe

@@ -84,6 +84,9 @@ int storage_unlock_file(storage_t* storage, const char* pathname, int client);
 // * Chiude il file <pathname> aperto in precedenza con storage_open_file da <client>
 int storage_close_file(storage_t* storage, const char* pathname, int client);
 
+// * Cancella il file <pathname> dallo storage, se è stato lockato dal client
+int storage_remove_file(storage_t* storage, const char* pathname, int client);
+
 // * Espelle dallo storage uno o più files per poterne ospitare uno di dimensione <size>
 // * Ritorna il numero di file espulsi, 0 se non è stato necessario espelle file, -1 in caso di fallimento
 // * In <victims> verranno salvati i files espulsi dallo storage

@@ -400,6 +400,40 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
     return 0;
 }
 
+int storage_remove_file(storage_t* storage, const char* pathname, int client){
+    // Controllo la validità degli argomenti
+    if (!storage || !pathname) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Recupero il file dallo storage
+    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    // Controllo che il file esista
+    if (!file) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    if(file->writer == 0 || file->writer != client){
+        // Il file non è attualmente lockato in scrittura, oppure
+        // la lock è detenuta da un client diverso
+        errno = ENOLCK;
+        return -1;
+    }
+
+    // A questo punto, file->writer sarà pari a client, per costruzione, 
+    // ovvero client ha in precedenza aperto il file in scrittura
+    // Cancello quindi il file dallo storage
+    if(icl_hash_delete(storage->files, pathname, NULL, &storage_file_destroy) == 0){
+        // TODO: funzione di free per file
+        icl_hash_dump(stdout, storage->files);
+        return 0;
+    }
+
+    return -1;
+}
+
 int storage_eject_file(storage_t* storage, const char* pathname, size_t size, int client, storage_file_t** victims){
     // Controllo la validità degli argomenti
     if(!storage || !pathname || size <= 0 || !victims){

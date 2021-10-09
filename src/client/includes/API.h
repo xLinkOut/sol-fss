@@ -35,4 +35,8 @@ int unlockFile(const char* pathname);
 // * Richiede la chiusura del file <pathname> precedentemente aperto con openFile
 int closeFile(const char* pathname);
 
+// * Rimuovere il file <pathname> cancellandolo dallo storage
+// * Richiede che il file sia stato aperto in scrittura
+int removeFile(const char* pathname);
+
 #endif
