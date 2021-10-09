@@ -103,7 +103,11 @@ bool linked_list_find(linked_list_t* llist, int data) {
 }
 
 void linked_list_print(linked_list_t* llist) {
-    if (!llist || !llist->first) return;
+    if (!llist) return;
+    if(!llist->first){
+        printf("[-]\n");
+        return;
+    }
     node_t* node = (node_t*)llist->first;
     printf("[%d]", node->data);
     while ((node = node->next)) {
