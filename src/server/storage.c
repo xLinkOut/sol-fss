@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <storage.h>
 #include <string.h>
+#include <rwlock.h>
 
 storage_t* storage_create(size_t max_files, size_t max_capacity) {
     // Controllo la validità degli argomenti
@@ -18,9 +19,18 @@ storage_t* storage_create(size_t max_files, size_t max_capacity) {
     // Alloco la memoria per lo storage
     storage_t* storage = malloc(sizeof(storage_t));
     if (!storage) return NULL;
+    
+    // Inizializzo la struttura relativa al lock globale dello storage
+    storage->rwlock = rwlock_create();
+    if(!storage->rwlock){
+        free(storage);
+        return NULL;
+    }
+    
     // Creo la hashmap per memorizzare i files
     storage->files = icl_hash_create(max_files, NULL, NULL);
     if (!storage->files) {
+        rwlock_destroy(storage->rwlock);
         free(storage);
         return NULL;
     }
@@ -40,6 +50,8 @@ void storage_destroy(storage_t* storage) {
     if (!storage) return;
     // Cancello la hashmap
     icl_hash_destroy(storage->files, NULL, NULL);  // TODO: free key-data
+    // Cancello il RWLock
+    rwlock_destroy(storage->rwlock);
     // Libero la memoria dello storage
     free(storage);
 }
@@ -76,29 +88,15 @@ storage_file_t* storage_file_create(const char* name, const void* contents, size
         file->size = 0;
     }
 
-    // Inizializzo le strutture relative al lock del file
-    // Accesso mutualmente esclusivo
-    if (pthread_mutex_init(&file->mutex, NULL) != 0) {
-        perror("Error: unable to init file mutex");
-        free((void*)file->name);
-        free((void*)file->contents);
-        free((void*)file);
+    // Inizializzo la struttura relativa al lock del file
+    file->rwlock = rwlock_create();
+    if(!file->rwlock){
+        free(file->contents);
+        free(file->name);
+        free(file);
         return NULL;
     }
 
-    // Variabile di condizione di attesa
-    if (pthread_cond_init(&file->wait, NULL) != 0) {
-        perror("Error: unable to init file wait condition variable");
-        pthread_mutex_destroy(&file->mutex);
-        free((void*)file->name);
-        free((void*)file->contents);
-        free((void*)file);
-        return NULL;
-    }
-
-    // Lettori/Scrittori in attesa
-    file->pending_readers = 0;
-    file->pending_writers = 0;
     // Lettori che hanno aperto il file
     file->readers = linked_list_create();
     // Scrittore che ha la lock sul file
@@ -114,6 +112,7 @@ void storage_file_destroy(storage_file_t* file) {
     // Libero la memoria occupata dal file
     free(file->name);
     free(file->contents);
+    rwlock_destroy(file->rwlock);
     free(file);
 }
 

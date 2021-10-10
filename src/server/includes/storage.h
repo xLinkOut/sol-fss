@@ -6,6 +6,7 @@
 #include <icl_hash.h>
 #include <linkedlist.h>
 #include <pthread.h>
+#include <rwlock.h>
 
 // * Struttura dati dello storage
 typedef struct Storage {
@@ -15,6 +16,8 @@ typedef struct Storage {
     size_t max_files;        // Numero di files massimo memorizzabile
     size_t capacity;         // Spazio attualmente occupato dai files
     size_t max_capacity;     // Spazio massimo disponibile
+
+    rwlock_t* rwlock; // Global Storage RWLock
 
 } storage_t;
 
@@ -36,17 +39,15 @@ typedef struct Storage {
     Gli scrittori hanno accesso prioritario al file, ma devono comunque aspettare che tutti i lettori lo chiudano, prima di operare.
 */
 typedef struct StorageFile {
+    // File-related
     char* name;      // Nome del file
     void* contents;  // Contenuto del file
     size_t size;     // Dimensione del file
 
-    // Read/Write lock
-    pthread_mutex_t mutex;         // Accesso esclusivo al file (lettura + scrittura)
-    pthread_cond_t wait;           // Condizione su cui lettori e scrittori aspettano
-    unsigned int pending_readers;  // Lettori in attesa
-    unsigned int pending_writers;  // Scrittori in attesa
-    linked_list_t* readers;        // Lista di lettori attivi, che hanno aperto il file in lettura
-    int writer;                    // Client che al momento ha il lock in scrittura sul file
+    // Lock-related
+    rwlock_t* rwlock;        // Readers/Writers Lock
+    linked_list_t* readers;  // Lista di lettori attivi, ovvero di client che hanno aperto il file in lettura
+    int writer;              // Client che al momento ha il lock in scrittura sul file
 } storage_file_t;
 
 // * Inizializza uno storage e ritorna un puntatore ad esso
@@ -71,7 +72,7 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
 // * Scrive nello storage il file <pathname> ed il suo contenuto <contents>
 int storage_write_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int client);
 
-// * Aggiunge <contents>, di dimensione <size>, in fondo al file <pathname> 
+// * Aggiunge <contents>, di dimensione <size>, in fondo al file <pathname>
 int storage_append_to_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int client);
 
 // * Imposta il lock in scrittura sul file <pathname> per <client>
