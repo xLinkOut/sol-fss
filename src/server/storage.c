@@ -135,7 +135,8 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     bool create_flag = IS_O_CREATE(flags);
     bool lock_flag = IS_O_LOCK(flags);
 
-    // TODO: Lock sull'intero storage se O_CREATE è settato
+    // Acquisisco l'accesso in lettura sullo storage
+    rwlock_start_read(storage->rwlock);
 
     // Controllo se il file esiste all'interno dello storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
@@ -145,52 +146,112 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     // Gestisco prima tutte le possibili situazioni di errore
     // Flag O_CREATE settato e file già esistente
     if (create_flag && already_exists) {
+        rwlock_done_read(storage->rwlock);
         errno = EEXIST;
         return -1;
     }
     // Flag O_CREATE non settato e file non esistente
     if (!create_flag && !already_exists) {
+        rwlock_done_read(storage->rwlock);
         errno = ENOENT;
         return -1;
     }
 
     // I flags sono coerenti con lo stato dello storage, posso procedere
     // Distinguo il caso in cui il file esiste già da quello in cui non esiste ancora
-    if (already_exists) {
-        // * Il file esiste già nello storage, faccio gli adeguati controlli per ogni operazione
-        // Controllo che lo stesso client non voglia aprire più volte lo stesso file
+    if (already_exists) { // && !O_CREATE
+        // * Il file esiste già nello storage
+
+        // Acquisisco l'accesso in lettura sul file
+        rwlock_start_read(file->rwlock);
+
+        // Controllo che il file non sia aperto in scrittura (locked) da un altro client
+        if (file->writer != 0 && file->writer != client) {
+            rwlock_done_read(file->rwlock);
+            rwlock_done_read(storage->rwlock);
+            errno = EACCES;
+            return -1;
+        }
+
+        // Controllo che il client non abbia già aperto il file (almeno in lettura)
+        // Qualora fosse già stato aperto in lettura, l'accesso in scrittura deve essere 
+        // richiesto dal client tramite la API lockFile
         if (linked_list_find(file->readers, client)) {
+            rwlock_done_read(file->rwlock);
+            rwlock_done_read(storage->rwlock);
             errno = EEXIST;
             return -1;
         }
 
-        // Controllo che il file non sia lockato da un altro client
-        if (file->writer != 0 && file->writer != client) {
-            errno = EACCES;
+        // Rilascio l'accesso in lettura sul file
+        rwlock_done_read(file->rwlock);
+        // Acquisisco l'accesso in scrittura sul file
+        rwlock_start_write(file->rwlock);
+
+        // Apro il file in lettura per il client
+        if(linked_list_push(file->readers, client, BACK) != 0){
+            // Errore di inserimento in lista
+            rwlock_done_write(file->rwlock);
+            rwlock_done_read(storage->rwlock);
+            // Errno è settato da linked_list_push
             return -1;
         }
-    } else {
+
+        // Se il flag O_LOCK è stato settato, apro il file anche in scrittura per il client
+        if(lock_flag) file->writer = client;
+
+        // Ho terminato, rilascio le lock acquisite
+        rwlock_done_write(file->rwlock);
+        rwlock_done_read(storage->rwlock);
+
+    } else { // && O_CREATE
         // * Il file non esiste ancora nello storage, lo creo
+        
         // Controllo che nello storage ci sia effettivamente spazio in termini di numero di files
         // ? In questo caso occorre far partire la procedura di replace? Magari per espellere il file più piccolo?
-        if (storage->number_of_files == storage->max_files) {
+        /* if (storage->number_of_files == storage->max_files) {
             errno = ENOSPC;
             return -1;
-        }
-        // Creo il file all'interno dello storage
+        } */
+
+        // Rilascio l'accesso in lettura sullo storage
+        rwlock_done_read(storage->rwlock);
+        // Acquisisco l'accesso in scrittura sullo storage
+        rwlock_start_write(storage->rwlock);
+
+        // Creo un nuovo file vuoto
         file = storage_file_create(pathname, NULL, 0);
-        icl_hash_insert(storage->files, pathname, file);
+
+        // * Non è necessario richiedere l'accesso in scrittura sul file perché non può essere ancora utilizzato da altri client
+
+        // Lo apro in lettura per il client
+        if(linked_list_push(file->readers, client, BACK) != 0){
+            // Errore di inserimento in lista
+            storage_file_destroy(file);
+            rwlock_done_write(storage->rwlock);
+            // Errno viene settato da icl_hash_insert
+            return -1;
+        }
+
+        // Se il flag O_LOCK è stato settato, apro il file anche in scrittura per il client
+        if(lock_flag) file->writer = client;
+
+        // Inserisco il file nello storage
+        if(!icl_hash_insert(storage->files, pathname, file)){
+            // Se l'inserimento nello storage fallisce, libero la memoria e ritorno errore
+            storage_file_destroy(file);
+            rwlock_done_write(storage->rwlock);
+            // Errno viene settato da icl_hash_insert
+            return -1;
+        }
+
+        // ! DEBUG
+        storage_file_print(file); // Stampo alcune informazioni sul file
+        icl_hash_dump(stdout, storage->files); // Stampo il contenuto dello storage
+
+        // Rilascio l'accesso in scrittura sullo storage
+        rwlock_done_write(storage->rwlock);
     }
-
-    // Apro il file in lettura
-    linked_list_push(file->readers, client, BACK);
-    // Controllo se aprire il file anche in scrittura
-    if (lock_flag) file->writer = client;
-
-    storage_file_print(file);
-    icl_hash_dump(stdout, storage->files);
-
-    // TODO: Rilasciare il lock sull'intero storage
 
     return 0;
 }
@@ -367,34 +428,56 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
         return -1;
     }
 
-    // TODO: Lock in lettura sullo storage
+    // Acquisisco l'accesso in lettura sullo storage
+    rwlock_start_read(storage->rwlock);
+
     // Controllo se il file esiste all'interno dello storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
-    // TODO: Unlock storage
 
     // Se non esiste, ritorno subito errore
     if (!file) {
+        rwlock_done_read(storage->rwlock);
         errno = ENOENT;
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sul file
+    rwlock_start_read(file->rwlock);
+
     // Controllo che <client> abbia precedentemente eseguito la openFile
     if (!linked_list_find(file->readers, client)) {
+        rwlock_done_read(file->rwlock);
+        rwlock_done_read(storage->rwlock);
         errno = ENOLCK;
         return -1;
     }
 
-    // TODO: Implementare una linked_list_remove(linked_list_t*, int)
-    // Rilascio il lock in lettura sul file
-    linked_list_pop(file->readers, &client, FRONT);
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(file->rwlock);
+    // Acquisisco l'accesso in scrittura sullo storage
+    rwlock_start_write(file->rwlock);
 
-    // Rilancio l'eventuale lock in scrittura sul file
-    // TODO: chiamare internamente la unlockFile()
-    if (file->writer != 0 && file->writer == client) {
-        file->writer = 0;
+    // Chiudo il file in scrittura per il client, se era stato aperto con questa modalità
+    // TODO: chiamare internamente la unlockFile ?
+    if (file->writer != 0 && file->writer == client) file->writer = 0;
+
+    // Chiudo il file in lettura per il client
+    // TODO: Implementare una linked_list_remove(linked_list_t*, int)
+    if(!linked_list_pop(file->readers, &client, FRONT)){
+        rwlock_done_write(file->rwlock);
+        rwlock_done_read(storage->rwlock);
+        // Errno è settato da linked_list_pop
+        return -1;
     }
 
+    // ! Debug
     storage_file_print(file);
+
+    // Rilascio l'accesso in scrittura sul file
+    rwlock_done_write(file->rwlock);
+    // Rilascio l'accesso in lettura sullo storage
+    // TODO: è possibile rilasciarlo anche prima ?
+    rwlock_done_read(storage->rwlock);
 
     return 0;
 }
