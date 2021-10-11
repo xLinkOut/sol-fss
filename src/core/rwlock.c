@@ -30,7 +30,7 @@ struct RWLock {
 };
 
 rwlock_t* rwlock_create() {
-    rwlock_t* rwlock = malloc(sizeof(rwlock));
+    rwlock_t* rwlock = malloc(sizeof(rwlock_t));
     if (!rwlock) return NULL;
 
     // Inizializzo i parametri relativi a lettori e scrittori
