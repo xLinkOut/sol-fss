@@ -658,10 +658,12 @@ int storage_eject_file(storage_t* storage, const char* pathname, size_t size, in
         return -1;
     }
 
-    // TODO: storage lock
-
+    // Acquisisco l'accesso in lettura sullo storage
+    rwlock_start_read(storage->rwlock);
+    
     // Controllo che la dimensione del file non sia maggiore dell'intero storage
     if(size > storage->max_capacity){
+        rwlock_done_read(storage->rwlock);
         errno = ENOSPC;
         return -1;
     }
@@ -669,16 +671,26 @@ int storage_eject_file(storage_t* storage, const char* pathname, size_t size, in
     // Controllo che il file esista nello storage (e.g. è stato creato con storage_open_file)
     storage_file_t* file = icl_hash_find(storage->files, pathname);
     if(!file){
+        rwlock_done_read(storage->rwlock);
         errno = ENOENT;
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sul file
+    rwlock_start_read(file->rwlock);
+
     // Controllo che il file sia stato aperto in scrittura dal client
     if(file->writer != 0 && file->writer != client){
+        rwlock_done_read(file->rwlock);
+        rwlock_done_read(storage->rwlock);
         errno = EPERM;
         return -1;
     }
 
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
+    // Acquisisco l'accesso in scrittura sullo storage
+    rwlock_start_write(storage->rwlock);
 
     // Controllo che ci sia spazio libero a sufficienza per salvare il file
     if(size > storage->capacity){
@@ -690,6 +702,9 @@ int storage_eject_file(storage_t* storage, const char* pathname, size_t size, in
         
         return victims_no;
     }
+
+    // Rilascio l'accesso in lettura sul file
+    rwlock_done_read(file->rwlock);
 
     return 0;
 }
