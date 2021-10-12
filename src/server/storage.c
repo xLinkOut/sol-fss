@@ -200,6 +200,9 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         // Se il flag O_LOCK è stato settato, apro il file anche in scrittura per il client
         if(lock_flag) file->writer = client;
 
+        // ! DEBUG
+        storage_file_print(file); // Stampo alcune informazioni sul file
+
         // Ho terminato, rilascio le lock acquisite
         rwlock_done_write(file->rwlock);
         rwlock_done_read(storage->rwlock);
@@ -216,6 +219,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
 
         // Rilascio l'accesso in lettura sullo storage
         rwlock_done_read(storage->rwlock);
+        // TODO: metodo per switchare read<->write lock atomicamente
         // Acquisisco l'accesso in scrittura sullo storage
         rwlock_start_write(storage->rwlock);
 
@@ -268,12 +272,10 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
 
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
-    
-    // Rilascio l'accesso in lettura sullo storage
-    rwlock_done_read(storage->rwlock);
 
     // Controllo se il file esiste all'interno dello storage
     if (!file) {
+        rwlock_done_read(storage->rwlock);
         errno = ENOENT;
         return -1;
     }
@@ -284,6 +286,7 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
     // Controllo che il client abbia aperto il file in lettura
     if (!linked_list_find(file->readers, client)) {
         rwlock_done_read(file->rwlock);
+        rwlock_done_read(storage->rwlock);
         errno = EPERM;
         return -1;
     }
@@ -300,7 +303,9 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
 
     // Rilascio l'accesso in scrittura sul file
     rwlock_done_write(file->rwlock);
-
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
+    
     return 0;
 }
 
@@ -317,12 +322,10 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
 
-    // Rilascio l'accesso in lettura sullo storage
-    rwlock_done_read(storage->rwlock);
-
     // Tutti i controlli del caso dovrebbero essere stati eseguiti dalla storage_eject_file
     // Tuttavia, effettuo comunque un controllo
     if (!file) {
+        rwlock_done_read(storage->rwlock);
         errno = ENOENT;
         return -1;
     }
@@ -333,6 +336,7 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     // Controllo nuovamente che il file sia stato aperto in scrittura dal client
     if(file->writer != 0 && file->writer != client){
         rwlock_done_read(file->rwlock);
+        rwlock_done_read(storage->rwlock);
         errno = EPERM;
         return -1;
     }
@@ -348,11 +352,12 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     file->contents = contents;
     file->size = size;
 
-    // Rilascio l'accesso in scrittura sul file
-    rwlock_done_write(file->rwlock);
-
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
     // Acquisisco l'accesso in scrittura sullo storage
     rwlock_start_write(storage->rwlock);
+    // Rilascio l'accesso in scrittura sul file
+    rwlock_done_write(file->rwlock);
 
     // Aggiorno le informazioni dello storage
     storage->capacity += size;
@@ -625,7 +630,7 @@ int storage_remove_file(storage_t* storage, const char* pathname, int client){
     
     // Rilascio l'accesso in lettura sullo storage
     rwlock_done_read(storage->rwlock);
-    // Acquisisco l'accesso in scrittura sul file
+    // Acquisisco l'accesso in scrittura sullo storage
     rwlock_start_write(storage->rwlock);
     // Rilascio l'accesso in lettura sul file
     rwlock_done_read(file->rwlock);
