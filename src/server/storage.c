@@ -334,7 +334,7 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     rwlock_start_read(file->rwlock);
 
     // Controllo nuovamente che il file sia stato aperto in scrittura dal client
-    if(file->writer != 0 && file->writer != client){
+    if(file->writer != client){
         rwlock_done_read(file->rwlock);
         rwlock_done_read(storage->rwlock);
         errno = EPERM;
