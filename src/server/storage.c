@@ -370,8 +370,15 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sullo storage
+    rwlock_start_read(storage->rwlock);
+
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
+    
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
+
     // Tutti i controlli del caso dovrebbero essere stati eseguiti dalla storage_eject_file
     // Tuttavia, effettuo comunque un controllo
     if (!file) {
@@ -379,11 +386,20 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sul file
+    rwlock_start_read(file->rwlock);
+    
     // Controllo nuovamente che il file sia stato aperto in scrittura dal client
     if(file->writer != 0 && file->writer != client){
+        rwlock_done_read(file->rwlock);
         errno = EPERM;
         return -1;
     }
+
+    // Rilascio l'accesso in lettura sul file
+    rwlock_done_read(file->rwlock);
+    // Acquisisco l'accesso in scrittura sul file
+    rwlock_start_write(file->rwlock);
 
     // Amplio la memoria allocata per il file
     void* updated_contents = realloc(file->contents, file->size + size);
@@ -391,11 +407,21 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
     file->contents = updated_contents;
     // Aggiungo <contents> partendo dalla fine di <file->contents>
     memcpy(file->contents + file->size, contents, size);
+    
+    // Rilascio l'accesso in scrittura sul file
+    rwlock_done_write(file->rwlock);
+
+    // Acquisisco l'accesso in scrittura sullo storage
+    rwlock_start_write(storage->rwlock);
+ 
     // Aggiorno la dimensione del file
     file->size += size;
     // todo update storage size
-    return 0;
 
+    // Rilascio l'accesso in scrittura sullo storage
+    rwlock_done_write(storage->rwlock);
+
+    return 0;
 }
 
 int storage_lock_file(storage_t* storage, const char* pathname, int client){
@@ -405,13 +431,23 @@ int storage_lock_file(storage_t* storage, const char* pathname, int client){
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sullo storage
+    rwlock_start_read(storage->rwlock);
+
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
+    
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
+
     // Controllo che il file esista
     if (!file) {
         errno = ENOENT;
         return -1;
     }
+
+    // Acquisisco l'accesso in lettura sul file
+    rwlock_start_read(file->rwlock);
 
     // Se il file è gia aperto in scrittura per il client che ha effettuato la richiesta, ritorno immediatamente
     if(file->writer == client) return 0;
@@ -421,17 +457,26 @@ int storage_lock_file(storage_t* storage, const char* pathname, int client){
 
     // Se il file non è stato aperto in scrittura da nessun client (= non è bloccato in scrittura)
     if(file->writer == 0){
+        // Rilascio l'accesso in lettura sul file
+        rwlock_done_read(file->rwlock);
+        // Acquisisco l'accesso in scrittura sul file
+        rwlock_start_write(file->rwlock);
         // Imposto il lock in scrittura sul file per il client 
         file->writer = client;
     }else{
         // Se il file è lockato da un altro client, aspetto che venga rilasciato
         // e solo successivamente acquisisco la lock
         // ! 
+        // Rilascio l'accesso in lettura sul file
+        rwlock_done_read(file->rwlock);
+        // Acquisisco l'accesso in scrittura sul file
+        rwlock_start_write(file->rwlock);
         // TODO: variabile di condizione sul lock su cui aspettare
         file->writer = client;
     }
-    
-    storage_file_print(file);
+
+    // Rilascio l'accesso in scrittura sul file
+    rwlock_done_write(file->rwlock);
 
     return 0;
 }
@@ -443,29 +488,47 @@ int storage_unlock_file(storage_t* storage, const char* pathname, int client){
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sullo storage
+    rwlock_start_read(storage->rwlock);
+
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
+    
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
+    
     // Controllo che il file esista
     if (!file) {
         errno = ENOENT;
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sul file
+    rwlock_start_read(file->rwlock);
+
     if(file->writer == 0 || file->writer != client){
         // Il file non è attualmente lockato in scrittura, oppure
         // la lock è detenuta da un client diverso
+        rwlock_done_read(file->rwlock);
         errno = ENOLCK;
         return -1;
     }
+
+    // Rilascio l'accesso in lettura sul file
+    rwlock_done_read(file->rwlock);
+    // Acquisisco l'accesso in scrittura sul file
+    rwlock_start_write(file->rwlock);
 
     // A questo punto, file->writer sarà pari a client, per costruzione, 
     // ovvero client ha in precedenza aperto il file in scrittura
     // Rilascio quindi la lock
     file->writer = 0;
-    storage_file_print(file);
     // Il file rimarrà aperto in lettura
-    return 0;
 
+    // Rilascio l'accesso in scrittura sul file
+    rwlock_done_write(file->rwlock);
+
+    return 0;
 }
 
 int storage_close_file(storage_t* storage, const char* pathname, int client) {
@@ -536,31 +599,52 @@ int storage_remove_file(storage_t* storage, const char* pathname, int client){
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sullo storage
+    rwlock_start_read(storage->rwlock);
+
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
+    
     // Controllo che il file esista
     if (!file) {
+        rwlock_done_read(storage->rwlock);
         errno = ENOENT;
         return -1;
     }
+    
+    // Acquisisco l'accesso in lettura sul file
+    rwlock_start_read(file->rwlock);
 
     if(file->writer == 0 || file->writer != client){
         // Il file non è attualmente lockato in scrittura, oppure
         // la lock è detenuta da un client diverso
+        rwlock_done_read(file->rwlock);
+        rwlock_done_read(storage->rwlock);
         errno = ENOLCK;
         return -1;
     }
-
+    
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
+    // Acquisisco l'accesso in scrittura sul file
+    rwlock_start_write(storage->rwlock);
+    // Rilascio l'accesso in lettura sul file
+    rwlock_done_read(file->rwlock);
+    
     // A questo punto, file->writer sarà pari a client, per costruzione, 
     // ovvero client ha in precedenza aperto il file in scrittura
     // Cancello quindi il file dallo storage
-    if(icl_hash_delete(storage->files, pathname, NULL, &storage_file_destroy) == 0){
+    if(icl_hash_delete(storage->files, pathname, NULL, &storage_file_destroy) == -1){
         // TODO: funzione di free per file
-        icl_hash_dump(stdout, storage->files);
-        return 0;
+        rwlock_done_write(storage->rwlock);    
+        return -1;
     }
+    
+    icl_hash_dump(stdout, storage->files);
+    // Rilascio l'accesso in scrittura sul file
+    rwlock_done_write(storage->rwlock);
 
-    return -1;
+    return 0;
 }
 
 int storage_eject_file(storage_t* storage, const char* pathname, size_t size, int client, storage_file_t** victims){
