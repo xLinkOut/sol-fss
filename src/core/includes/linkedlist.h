@@ -1,40 +1,40 @@
 // @author Luca Cirillo (545480)
 
-// ! Linked List
+// * Linked List, con inserimento in coda e rimozione partendo dalla testa
 
-#include <errno.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
-// * Specifica se effettuare le operazioni di Push e Pop dalla testa o dalla coda della lista
-typedef enum FrontBack { FRONT, BACK } front_back;
-
-// * Struttura dati un generico nodo della lista
+// * Struttura dati di un nodo della lista
 typedef struct ListNode {
     int data;
-    struct ListNode* prev;  // Puntatore al nodo precedente
     struct ListNode* next;  // Puntatore al nodo successivo
-} node_t;
+} list_node_t;
 
+// * Struttura dati della lista
 typedef struct LinkedList {
-    node_t* first;  // Testa della lista
-    node_t* last;   // Coda della lista
-    size_t size;    // Numero di elementi nella lista
+    list_node_t* first;  // Testa della lista
+    list_node_t* last;   // Coda della lista
+    size_t size;         // Numero di elementi nella lista
 } linked_list_t;
 
-// * Crea una lista vuota e ritorna un puntatore ad essa
+// * Crea una nuova lista vuota
+// Ritorna un puntatore alla lista in caso di successo, NULL in caso di fallimento, setta errno
 linked_list_t* linked_list_create();
 
 // * Cancella una lista creata con linked_list_create
 void linked_list_destroy(linked_list_t* llist);
 
-// * Inserisce un nodo nella lista, in testa o in coda in accordo a where
-int linked_list_push(linked_list_t* llist, int data, front_back where);
+// * Inserisce un nuovo nodo in coda alla lista, che conterrà <data>
+// Ritorna true in caso di successo, false in caso di fallimento, setta errno
+bool linked_list_insert(linked_list_t* llist, int data);
 
-// * Rimuove un nodo nella lista, dalla testa o dalla coda in accordo a from
-int linked_list_pop(linked_list_t* llist, int* data, front_back from);
+// * Rimuove il nodo contenente <data> dalla lista, partendo dalla testa
+// Ritorna true in caso di successo, false in caso di fallimento, setta errno
+bool linked_list_remove(linked_list_t* llist, int data);
 
-// * Cerca uno specifico nodo nella lista, ritorna true se lo trova, false altrimenti
+// * Cerca il nodo contenente <data> nella lista, partendo dalla testa
+// Ritorna true in caso di successo, false in caso di fallimento, setta errno
 bool linked_list_find(linked_list_t* llist, int data);
 
 // * Visualizza la lista a schermo

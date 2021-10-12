@@ -1,5 +1,7 @@
 // @author Luca Cirillo (545480)
 
+// * Linked List, con inserimento in coda e rimozione partendo dalla testa
+
 #include <errno.h>
 #include <linkedlist.h>
 #include <stdio.h>
@@ -14,83 +16,98 @@ linked_list_t* linked_list_create() {
 }
 
 void linked_list_destroy(linked_list_t* llist) {
+    // Controllo la validità degli argomenti
     if (!llist) {
         errno = EINVAL;
         return;
     }
+    // Scorro la lista per cancellare tutti i nodi
     while (llist->first != llist->last) {
-        node_t* node = (node_t*)llist->first;
+        list_node_t* node = llist->first;
         llist->first = llist->first->next;
-        free((void*)node);
+        free(node);
     }
+    // Cancello la testa della lista
     if (llist->first) free(llist->first);
+    // Cancello la lista
     free(llist);
 }
 
-int linked_list_push(linked_list_t* llist, int data, front_back where) {
+bool linked_list_insert(linked_list_t* llist, int data) {
+    // Controllo la validità degli argomenti
     if (!llist) {
         errno = EINVAL;
-        return -1;
+        return false;
     }
-    node_t* new_node = malloc(sizeof(node_t));
-    if (!new_node) return -1;
+    // Creo un nuovo nodo
+    list_node_t* new_node = malloc(sizeof(list_node_t));
+    if (!new_node) return false;
     new_node->data = data;
-    new_node->prev = NULL;
     new_node->next = NULL;
 
     if (!llist->first) {
+        // La lista è vuota, aggiorno testa e coda
         llist->first = new_node;
         llist->last = new_node;
     } else {
-        if (where == FRONT) {
-            // * Push front
-            new_node->next = llist->first;
-            (llist->first)->prev = new_node;
-            llist->first = new_node;
-        } else {
-            // * Push back
-            new_node->prev = llist->last;
-            (llist->last)->next = new_node;
-            llist->last = new_node;
-        }
+        // Inserisco in coda
+        (llist->last)->next = new_node;
+        llist->last = new_node;
     }
 
     llist->size++;
-    return 0;
+    return true;
 }
 
-int linked_list_pop(linked_list_t* llist, int* data, front_back from) {
+bool linked_list_remove(linked_list_t* llist, int data) {
+    // Controllo la validità degli argomenti
     if (!llist || !data) {
         errno = EINVAL;
-        return -1;
+        return false;
     }
 
-    if (llist->size == 0) {
+    // Controllo che la lista non sia vuota
+    if (!llist->first) {
         errno = ENOENT;
         return -1;
     }
 
-    node_t* node;
-    if (from == FRONT) {
-        // * Pop front
-        node = llist->first;
-        llist->first = (llist->first)->next;
-    } else {
-        // * Pop back
-        node = llist->last;
-        llist->last = (llist->last)->next;
+    // Se il nodo cercato è la testa della lista
+    if (llist->first->data == data) {
+        list_node_t* head = llist->first;
+        llist->first = llist->first->next;
+        free(head);
+        // Se ho rimosso l'unico nodo della lista, aggiorno anche la coda
+        if (llist->first == NULL) llist->last = NULL;
+        return true;
     }
-    *data = node->data;
-    free((void*)node);
 
-    llist->size--;
-    return 0;
+    // Scorro la lista partendo dalla testa per trovare il nodo che contiene <data>
+    list_node_t* last_node = NULL;
+    list_node_t* current_node = llist->first->next;
+
+    while (current_node) {
+        if (current_node->data == data) {
+            // Rimuovo il nodo
+            // Aggancio il nodo precedente a quello successivo, rispetto al nodo corrente
+            if (last_node) last_node->next = current_node->next;
+            if (last_node->next == NULL) llist->last = last_node;
+            free(current_node);
+            llist->size--;
+            return true;
+        }
+        last_node = current_node;
+        current_node = current_node->next;
+    }
+
+    // Se nessun nodo corrisponde, alla fine ritorno false
+    return false;
 }
 
 bool linked_list_find(linked_list_t* llist, int data) {
     // Controllo la validità degli argomenti e che la lista non sia vuota
     if (!llist || !llist->first) return false;
-    node_t* current_node = llist->first;
+    list_node_t* current_node = llist->first;
     // Scorro tutti gli elementi della lista
     while (current_node) {
         // Appena trovo un nodo con l'elemento da cercare, ritorno true
@@ -104,11 +121,11 @@ bool linked_list_find(linked_list_t* llist, int data) {
 
 void linked_list_print(linked_list_t* llist) {
     if (!llist) return;
-    if(!llist->first){
+    if (!llist->first) {
         printf("[-]\n");
         return;
     }
-    node_t* node = (node_t*)llist->first;
+    list_node_t* node = (list_node_t*)llist->first;
     printf("[%d]", node->data);
     while ((node = node->next)) {
         printf("->[%d]", node->data);
