@@ -189,7 +189,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         rwlock_start_write(file->rwlock);
 
         // Apro il file in lettura per il client
-        if(linked_list_push(file->readers, client, BACK) != 0){
+        if(linked_list_push(file->readers, client, FRONT) != 0){
             // Errore di inserimento in lista
             rwlock_done_write(file->rwlock);
             rwlock_done_read(storage->rwlock);
@@ -225,7 +225,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         // * Non è necessario richiedere l'accesso in scrittura sul file perché non può essere ancora utilizzato da altri client
 
         // Lo apro in lettura per il client
-        if(linked_list_push(file->readers, client, BACK) != 0){
+        if(linked_list_push(file->readers, client, FRONT) != 0){
             // Errore di inserimento in lista
             storage_file_destroy(file);
             rwlock_done_write(storage->rwlock);
@@ -263,22 +263,43 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sullo storage
+    rwlock_start_read(storage->rwlock);
+
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
+    
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
+
     // Controllo se il file esiste all'interno dello storage
     if (!file) {
         errno = ENOENT;
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sul file
+    rwlock_start_read(file->rwlock);
+
     // Controllo che il client abbia aperto il file in lettura
     if (!linked_list_find(file->readers, client)) {
+        rwlock_done_read(file->rwlock);
         errno = EPERM;
         return -1;
     }
+
+    // Rilascio l'accesso in lettura sul file
+    rwlock_done_read(file->rwlock);
+    // Acquisisco l'accesso in scrittura sul file
+    rwlock_start_write(file->rwlock);
+
     //printf("r: %p\n", file->contents);
     *contents = file->contents;
     *size = file->size;
+
+    // Rilascio l'accesso in scrittura sul file
+    rwlock_done_write(file->rwlock);
+
     return 0;
 }
 
@@ -289,8 +310,15 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sullo storage
+    rwlock_start_read(storage->rwlock);
+
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
+
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
+
     // Tutti i controlli del caso dovrebbero essere stati eseguiti dalla storage_eject_file
     // Tuttavia, effettuo comunque un controllo
     if (!file) {
@@ -298,11 +326,20 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
         return -1;
     }
 
+    // Acquisisco l'accesso in lettura sul file
+    rwlock_start_read(file->rwlock);
+
     // Controllo nuovamente che il file sia stato aperto in scrittura dal client
     if(file->writer != 0 && file->writer != client){
+        rwlock_done_read(file->rwlock);
         errno = EPERM;
         return -1;
     }
+
+    // Rilascio l'accesso in lettura sul file
+    rwlock_done_read(file->rwlock);
+    // Acquisisco l'accesso in scrittura sul file
+    rwlock_start_write(file->rwlock);
 
     // Aggiorno il contenuto del file
     // TODO: se il file non è vuoto, devo cancellare il vecchio contenuto prima di scrivere il nuovo
@@ -310,8 +347,17 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     file->contents = contents;
     file->size = size;
 
+    // Rilascio l'accesso in scrittura sul file
+    rwlock_done_write(file->rwlock);
+
+    // Acquisisco l'accesso in scrittura sullo storage
+    rwlock_start_write(storage->rwlock);
+
     // Aggiorno le informazioni dello storage
     storage->capacity += size;
+
+    // Rilascio l'accesso in scrittura sullo storage
+    rwlock_done_write(storage->rwlock);
     
     return 0;
 }
