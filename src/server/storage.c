@@ -189,11 +189,11 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         rwlock_start_write(file->rwlock);
 
         // Apro il file in lettura per il client
-        if(linked_list_push(file->readers, client, FRONT) != 0){
+        if(!linked_list_insert(file->readers, client)){
             // Errore di inserimento in lista
             rwlock_done_write(file->rwlock);
             rwlock_done_read(storage->rwlock);
-            // Errno è settato da linked_list_push
+            // Errno è settato da linked_list_insert
             return -1;
         }
 
@@ -225,11 +225,11 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         // * Non è necessario richiedere l'accesso in scrittura sul file perché non può essere ancora utilizzato da altri client
 
         // Lo apro in lettura per il client
-        if(linked_list_push(file->readers, client, FRONT) != 0){
+        if(!linked_list_insert(file->readers, client)){
             // Errore di inserimento in lista
             storage_file_destroy(file);
             rwlock_done_write(storage->rwlock);
-            // Errno viene settato da icl_hash_insert
+            // Errno viene settato da linked_list_insert
             return -1;
         }
 
@@ -572,11 +572,10 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
     if (file->writer != 0 && file->writer == client) file->writer = 0;
 
     // Chiudo il file in lettura per il client
-    // TODO: Implementare una linked_list_remove(linked_list_t*, int)
-    if(!linked_list_pop(file->readers, &client, FRONT)){
+    if(!linked_list_remove(file->readers, client)){
         rwlock_done_write(file->rwlock);
         rwlock_done_read(storage->rwlock);
-        // Errno è settato da linked_list_pop
+        // Errno è settato da linked_list_remove
         return -1;
     }
 
