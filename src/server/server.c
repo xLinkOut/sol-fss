@@ -222,6 +222,9 @@ static void* worker(void* args) {
                     break;
                 }
 
+                // Libero la memoria occupata per leggere il file
+                free(f_contents);
+
                 // TODO: fix this, usare direttamente code come codice risposta
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", 0);

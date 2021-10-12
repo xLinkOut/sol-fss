@@ -258,7 +258,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
 
 int storage_read_file(storage_t* storage, const char* pathname, void** contents, size_t* size, int client){
     // Controllo la validità degli argomenti
-    if (!storage || !pathname || !contents) {
+    if (!storage || !pathname || !contents || !size) {
         errno = EINVAL;
         return -1;
     }
@@ -293,9 +293,10 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
     // Acquisisco l'accesso in scrittura sul file
     rwlock_start_write(file->rwlock);
 
-    //printf("r: %p\n", file->contents);
-    *contents = file->contents;
+    // Copio il contenuto e la dimensione del file
     *size = file->size;
+    *contents = malloc(file->size);
+    memcpy(*contents, file->contents, file->size);
 
     // Rilascio l'accesso in scrittura sul file
     rwlock_done_write(file->rwlock);
