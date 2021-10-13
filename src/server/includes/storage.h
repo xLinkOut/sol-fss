@@ -48,6 +48,12 @@ typedef struct StorageFile {
     rwlock_t* rwlock;        // Readers/Writers Lock
     linked_list_t* readers;  // Lista di lettori attivi, ovvero di client che hanno aperto il file in lettura
     int writer;              // Client che al momento ha il lock in scrittura sul file
+
+    // Replacement-related
+    time_t creation_time;    // Timestamp della creazione del file nello storage (FIFO)
+    time_t last_use_time;    // Timestamp dell'ultimo utilizzo del file (LRU)
+    unsigned int frequency;  // Numero di accessi al file (LFU)
+
 } storage_file_t;
 
 // * Inizializza uno storage e ritorna un puntatore ad esso

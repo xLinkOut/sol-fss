@@ -8,6 +8,7 @@
 #include <storage.h>
 #include <string.h>
 #include <rwlock.h>
+#include <time.h>
 
 storage_t* storage_create(size_t max_files, size_t max_capacity) {
     // Controllo la validità degli argomenti
@@ -101,6 +102,15 @@ storage_file_t* storage_file_create(const char* name, const void* contents, size
     file->readers = linked_list_create();
     // Scrittore che ha la lock sul file
     file->writer = 0;
+
+    // Dati utili alla politica di rimpiazzo scelta
+    file->creation_time = time(NULL); // Timestamp corrente
+    file->last_use_time = file->creation_time; // Inizialmente, coincide con il tempo di creazione
+    file->frequency = 0; // Si suppone che la creazione del file non conti come utilizzo dello stesso
+
+    // Nota: non ha senso impostare inizialmente <last_use_time> a 0 in quanto un file appena creato è vuoto,
+    // e da li a poco seguirà, tipicamente, una writeFile. Dal punto di vista della politica di rimpiazzo,
+    // non conviene eliminare un file vuoto (con dimensione pari a 0), nonostante questo risulti come mai utilizzato.
 
     // Ritorno un puntatore al file
     return file;
