@@ -273,7 +273,7 @@ int writeFile(const char* pathname, const char* dirname){
 
     printf("writeFile sent\n");
 
-    // Attendo di ricevere il numero di file espulsi
+    /* // Attendo di ricevere il numero di file espulsi
     int victims_no = 0;
     memset(message_buffer, 0, REQUEST_LENGTH);
     if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
@@ -337,7 +337,7 @@ int writeFile(const char* pathname, const char* dirname){
 
         free(contents);
         victims_no--;
-    }
+    } */
 
     // Alloco la memoria necessaria per leggere il file
     void* contents = malloc(file_stat.st_size);
@@ -398,7 +398,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
     printf("appendToFile sent\n");
 
-    // Attendo di ricevere il numero di file espulsi
+    /* // Attendo di ricevere il numero di file espulsi
     int victims_no = 0;
     memset(message_buffer, 0, REQUEST_LENGTH);
     if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
@@ -462,7 +462,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
         free(contents);
         victims_no--;
-    }
+    } */
     
     // Invio il contenuto del file che voglio scrivere
     if (writen((long)client_socket, (void*)buf, size) == -1) {

@@ -257,7 +257,7 @@ static void* worker(void* args) {
 
                 // Avendo la dimensione del file, determino se è necessario espellere
                 // uno o più files dallo storage per liberare spazio per il nuovo file
-                // TODO: Generalizzare /core/linked_list.h rendendo il campo <data> di tipo 'void*'
+                /* // TODO: Generalizzare /core/linked_list.h rendendo il campo <data> di tipo 'void*'
                 storage_file_t* victims[10]; // TODO: utilizzare qui una linked list di storage_file_t*
                 int victims_no = storage_eject_file(worker_args->storage, pathname, file_size, fd_ready, victims);
                 if(victims_no == -1){
@@ -288,7 +288,7 @@ static void* worker(void* args) {
                         perror("Error: writen failed");
                         break;
                     }
-                }
+                } */
 
                 // Preparo il necessario per ricevere il nuovo file da inserire nello storage
                 // Conosco la dimensione, quindi posso allocare lo spazio necessario
@@ -334,7 +334,7 @@ static void* worker(void* args) {
 
                 printf("APPEND: %s %zd\n", pathname, file_size);
 
-                // Avendo la dimensione del file, determino se è necessario espellere
+                /* // Avendo la dimensione del file, determino se è necessario espellere
                 // uno o più files dallo storage per liberare spazio per il nuovo file
                 // TODO: Generalizzare /core/linked_list.h rendendo il campo <data> di tipo 'void*'
                 victims[10]; // TODO: utilizzare qui una linked list di storage_file_t*
@@ -367,7 +367,7 @@ static void* worker(void* args) {
                         perror("Error: writen failed");
                         break;
                     }
-                }
+                } */
 
                 // Preparo il necessario per ricevere il contenuto da aggiungere al file
                 // Conosco la dimensione, quindi posso allocare lo spazio necessario
