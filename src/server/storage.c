@@ -131,6 +131,9 @@ void storage_file_print(storage_file_t* file) {
     if (!file) return;
     printf("%s (%zd Bytes)\nWriter: [%d], Readers: ", file->name, file->size, file->writer);
     linked_list_print(file->readers);
+    printf("Tempo di creazione: %ld\n", file->creation_time);
+    printf("Ultimo utilizzo: %ld\n", file->last_use_time);
+    printf("Numero di accessi: %u\n", file->frequency);
 }
 
 // ! APIs
@@ -210,6 +213,10 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
 
         // Se il flag O_LOCK è stato settato, apro il file anche in scrittura per il client
         if(lock_flag) file->writer = client;
+
+        // Aggioro le statistiche del file
+        file->last_use_time = time(NULL);
+        file->frequency++;
 
         // ! DEBUG
         storage_file_print(file); // Stampo alcune informazioni sul file
@@ -316,6 +323,10 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
     *contents = malloc(file->size);
     memcpy(*contents, file->contents, file->size);
 
+    // Aggioro le statistiche del file
+    file->last_use_time = time(NULL);
+    file->frequency++;
+
     // Rilascio l'accesso in scrittura sul file
     rwlock_done_write(file->rwlock);
     // Rilascio l'accesso in lettura sullo storage
@@ -368,6 +379,10 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     // Aggiorno il contenuto del file
     file->contents = contents;
     file->size = size;
+
+    // Aggioro le statistiche del file
+    file->last_use_time = time(NULL);
+    file->frequency++;
 
     // Rilascio l'accesso in lettura sullo storage
     rwlock_done_read(storage->rwlock);
@@ -432,7 +447,11 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
     file->contents = updated_contents;
     // Aggiungo <contents> partendo dalla fine di <file->contents>
     memcpy(file->contents + file->size, contents, size);
-    
+
+    // Aggioro le statistiche del file
+    file->last_use_time = time(NULL);
+    file->frequency++;
+
     // Rilascio l'accesso in scrittura sul file
     rwlock_done_write(file->rwlock);
 
@@ -503,6 +522,10 @@ int storage_lock_file(storage_t* storage, const char* pathname, int client){
         file->writer = client;
     }
 
+    // Aggioro le statistiche del file
+    file->last_use_time = time(NULL);
+    file->frequency++;
+
     // Rilascio l'accesso in scrittura sul file
     rwlock_done_write(file->rwlock);
 
@@ -552,6 +575,10 @@ int storage_unlock_file(storage_t* storage, const char* pathname, int client){
     // Rilascio quindi la lock
     file->writer = 0;
     // Il file rimarrà aperto in lettura
+
+    // Aggioro le statistiche del file
+    file->last_use_time = time(NULL);
+    file->frequency++;
 
     // Rilascio l'accesso in scrittura sul file
     rwlock_done_write(file->rwlock);
@@ -607,6 +634,10 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
         return -1;
     }
 
+    // Aggioro le statistiche del file
+    file->last_use_time = time(NULL);
+    file->frequency++;
+    
     // ! Debug
     storage_file_print(file);
 
