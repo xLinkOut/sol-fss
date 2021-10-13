@@ -12,12 +12,12 @@
 typedef struct Storage {
     icl_hash_t* files;  // Hashmap di StorageFile
 
-    size_t number_of_files;  // Numero di files attualmente memorizzati
-    size_t max_files;        // Numero di files massimo memorizzabile
-    size_t capacity;         // Spazio attualmente occupato dai files
-    size_t max_capacity;     // Spazio massimo disponibile
+    size_t number_of_files;  // Numero di files attualmente memorizzati, parte da 0 fino a <max_files>
+    size_t max_files;        // Numero di files massimo memorizzabile, pari a STORAGE_MAX_FILES
+    size_t capacity;         // Spazio attualmente occupato dai files, parte da 0 fino a <max_capacity>
+    size_t max_capacity;     // Spazio massimo disponibile, pari a STORAGE_MAX_CAPACITY
 
-    rwlock_t* rwlock; // Global Storage RWLock
+    rwlock_t* rwlock;  // Global Storage RWLock
 
 } storage_t;
 

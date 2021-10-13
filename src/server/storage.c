@@ -38,7 +38,7 @@ storage_t* storage_create(size_t max_files, size_t max_capacity) {
     // Inizializzo o salvo gli altri parametri
     storage->number_of_files = 0;
     storage->max_files = max_files;
-    storage->capacity = max_capacity;
+    storage->capacity = 0;
     storage->max_capacity = max_capacity;
 
     // Ritorno un puntatore allo storage
@@ -249,6 +249,10 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
             return -1;
         }
 
+        // Aggiorno le informazioni dello storage
+        storage->number_of_files++; // Incremento il numero di file presenti nello storage
+        //printf("Lo storage contiene %d files\n", storage->number_of_files);
+
         // ! DEBUG
         storage_file_print(file); // Stampo alcune informazioni sul file
         icl_hash_dump(stdout, storage->files); // Stampo il contenuto dello storage
@@ -346,9 +350,11 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     // Acquisisco l'accesso in scrittura sul file
     rwlock_start_write(file->rwlock);
 
+    // Rimuovo le tracce di un eventuale file precedentemente scritto
+    if(file->contents) free(file->contents);
+    size_t old_size = file->size; // Usata in fondo per aggiornare le informazioni dello storage
+    
     // Aggiorno il contenuto del file
-    // TODO: se il file non è vuoto, devo cancellare il vecchio contenuto prima di scrivere il nuovo
-    free(file->contents); // TODO: devo effettivamente farlo?
     file->contents = contents;
     file->size = size;
 
@@ -360,7 +366,10 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     rwlock_done_write(file->rwlock);
 
     // Aggiorno le informazioni dello storage
-    storage->capacity += size;
+    // Sottraggo alla capacità dello storage quella occupata dal file che eventualmente ho sovrascritto,
+    // quindi sommo la dimensione del nuovo file caricato
+    storage->capacity = (storage->capacity - old_size) + size;
+    //printf("Lo storage occupa %d bytes\n", storage->capacity);
 
     // Rilascio l'accesso in scrittura sullo storage
     rwlock_done_write(storage->rwlock);
@@ -421,7 +430,10 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
  
     // Aggiorno la dimensione del file
     file->size += size;
-    // todo update storage size
+
+    // Aggiorno le informazioni dello storage
+    storage->capacity += size; // Sommo la dimensione del contenuto aggiunto
+    //printf("Lo storage occupa %d bytes\n", storage->capacity);
 
     // Rilascio l'accesso in scrittura sullo storage
     rwlock_done_write(storage->rwlock);
@@ -628,6 +640,9 @@ int storage_remove_file(storage_t* storage, const char* pathname, int client){
         return -1;
     }
     
+    // Usata in fondo per aggiornare le informazioni dello storage
+    size_t old_size = file->size;
+
     // Rilascio l'accesso in lettura sullo storage
     rwlock_done_read(storage->rwlock);
     // Acquisisco l'accesso in scrittura sullo storage
@@ -645,6 +660,13 @@ int storage_remove_file(storage_t* storage, const char* pathname, int client){
     }
     
     icl_hash_dump(stdout, storage->files);
+
+    // Aggiorno le informazioni dello storage
+    storage->number_of_files--; // Decremento il numero di file nello storage
+    storage->capacity -= old_size; // Libero lo spazio occupato dal file rimosso
+    //printf("Lo storage contiene %d files\n", storage->number_of_files);
+    //printf("Lo storage occupa %d bytes\n", storage->capacity);
+
     // Rilascio l'accesso in scrittura sul file
     rwlock_done_write(storage->rwlock);
 
