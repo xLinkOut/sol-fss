@@ -684,7 +684,7 @@ int main(int argc, char* argv[]) {
     log_event("INFO", " == Server bootstrap == ");
 
     // ! STORAGE
-    storage_t* storage = storage_create(STORAGE_MAX_FILES, STORAGE_MAX_CAPACITY);
+    storage_t* storage = storage_create(STORAGE_MAX_FILES, STORAGE_MAX_CAPACITY, REPLACEMENT_POLICY);
     if (!storage) {
         perror("Error: storage creation failed");
         return errno;

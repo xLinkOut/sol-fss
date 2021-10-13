@@ -3,10 +3,8 @@
 #ifndef _SERVER_CONFIG_H_
 #define _SERVER_CONFIG_H_
 
-#include <stddef.h> // size_t
-
-// Politica di rimpiazzamento
-enum POLICY { FIFO, LRU, LFU };
+#include <constants.h>  // replacement_policy_t
+#include <stddef.h>     // size_t
 
 // Percorso del file di configurazione specificato come parametro
 char* CONFIG_PATH;
@@ -21,7 +19,7 @@ size_t STORAGE_MAX_FILES;
 // Dimensione massima dello Storage, in Mb
 size_t STORAGE_MAX_CAPACITY;
 // Politica di rimpiazzamento
-enum POLICY REPLACEMENT_POLICY;
+replacement_policy_t REPLACEMENT_POLICY;
 // Path al Socket file
 char* SOCKET_PATH;
 // Path al Log file

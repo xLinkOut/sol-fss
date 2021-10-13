@@ -12,13 +12,14 @@
 typedef struct Storage {
     icl_hash_t* files;  // Hashmap di StorageFile
 
+    replacement_policy_t replacement_policy;  // Politica di rimpiazzo scelta
+
+    rwlock_t* rwlock;  // Global Storage read-write-lock
+
     size_t number_of_files;  // Numero di files attualmente memorizzati, parte da 0 fino a <max_files>
     size_t max_files;        // Numero di files massimo memorizzabile, pari a STORAGE_MAX_FILES
     size_t capacity;         // Spazio attualmente occupato dai files, parte da 0 fino a <max_capacity>
     size_t max_capacity;     // Spazio massimo disponibile, pari a STORAGE_MAX_CAPACITY
-
-    rwlock_t* rwlock;  // Global Storage RWLock
-
 } storage_t;
 
 // * Struttura dati di un generico file memorizzato nello storage
@@ -57,7 +58,7 @@ typedef struct StorageFile {
 } storage_file_t;
 
 // * Inizializza uno storage e ritorna un puntatore ad esso
-storage_t* storage_create(size_t max_files, size_t max_capacity);
+storage_t* storage_create(size_t max_files, size_t max_capacity, replacement_policy_t rp);
 
 // * Cancella uno storage creato con storage_create
 void storage_destroy(storage_t* storage);

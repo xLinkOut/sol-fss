@@ -10,7 +10,7 @@
 #include <rwlock.h>
 #include <time.h>
 
-storage_t* storage_create(size_t max_files, size_t max_capacity) {
+storage_t* storage_create(size_t max_files, size_t max_capacity, replacement_policy_t rp) {
     // Controllo la validità degli argomenti
     if (max_files == 0 || max_capacity == 0) {
         errno = EINVAL;
@@ -37,6 +37,7 @@ storage_t* storage_create(size_t max_files, size_t max_capacity) {
     }
 
     // Inizializzo o salvo gli altri parametri
+    storage->replacement_policy = rp;
     storage->number_of_files = 0;
     storage->max_files = max_files;
     storage->capacity = 0;

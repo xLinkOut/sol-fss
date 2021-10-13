@@ -1,5 +1,8 @@
 // @author Luca Cirillo (545480)
-// Costanti e macro condivise tra client e server
+// * Costanti e macro condivise tra client e server
+
+#ifndef _CONSTANTS_H_
+#define _CONSTANTS_H_
 
 // Gestione di flags
 #define SET_FLAG(mask, flag) mask |= flag
@@ -13,6 +16,12 @@
 
 // Lunghezza massima di un qualsiasi messaggio scambiato tra client e server
 #define MESSAGE_LENGTH 2048
+
+typedef enum ReplacementPolicy {
+    FIFO,
+    LRU,
+    LFU
+} replacement_policy_t;
 
 typedef enum RequestCode {
     OPEN,       // openFile
@@ -28,5 +37,7 @@ typedef enum RequestCode {
 } request_code;
 
 typedef enum ResponseCode {
-    SUCCESS // Operazione eseguita con successo
+    SUCCESS  // Operazione eseguita con successo
 } response_code;
+
+#endif
