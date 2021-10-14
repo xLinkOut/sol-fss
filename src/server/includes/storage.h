@@ -77,7 +77,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
 int storage_read_file(storage_t* storage, const char* pathname, void** contents, size_t* size, int client);
 
 // * Scrive nello storage il file <pathname> ed il suo contenuto <contents>
-int storage_write_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int client);
+int storage_write_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int* victims_no, storage_file_t** victims, int client);
 
 // * Aggiunge <contents>, di dimensione <size>, in fondo al file <pathname>
 int storage_append_to_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int client);

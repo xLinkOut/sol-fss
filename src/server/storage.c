@@ -335,7 +335,7 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
     return 0;
 }
 
-int storage_write_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int client){
+int storage_write_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int* victims_no, storage_file_t** victims, int client){
     // Controllo la validità degli argomenti
     if (!storage || !pathname || !contents || size <= 0) {
         errno = EINVAL;
@@ -366,6 +366,39 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
         errno = EPERM;
         return -1;
     }
+
+    // Algoritmo di rimpiazzo
+    *victims_no = 0;
+    victims = malloc(sizeof(storage_file_t*) * storage->number_of_files); // Al più, espello tutti i file
+    // Finché non c'è spazio sufficiente a contenere il nuovo file, seleziono file da espellere
+    while((storage->capacity - file->size) + size > storage->max_capacity){
+        // Seleziono il file da espellere
+        char* victim_name = "utils.c"; // icl_hash_get_victim(storage->files, storage->replacement_policy, pathname);
+        if(!victim_name){
+            // Non è stato possibile espelle alcun file, scrittura annullata
+        }
+
+        // Recupero il file dallo storage
+        storage_file_t* victim = icl_hash_find(storage->files, victim_name);
+        
+        // Effettuo una copia del file per poterlo inviare al client
+        victims[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
+
+        // Elimino il file dallo storage
+        icl_hash_delete(storage->files, victim_name, NULL, &storage_file_destroy);
+        // Aggiorno le informazioni dello storage
+        storage->number_of_files--; // Decremento il numero di file nello storage
+        storage->capacity -= victims[*victims_no]->size; // Libero lo spazio occupato dal file rimosso
+
+        // Incremento il numero dei file espulsi
+        *victims_no++;
+
+    }
+    
+    printf("Victims number: %d\n", *victims_no);
+    if(victims && victims[0]) printf("First victims: %s\n", victims[0]->name);
+
+    if(victims_no == 0) free(victims);
 
     // Rilascio l'accesso in lettura sul file
     rwlock_done_read(file->rwlock);
