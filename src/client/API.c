@@ -263,6 +263,8 @@ int writeFile(const char* pathname, const char* dirname){
     void* contents = malloc(file_stat.st_size);
     // Leggo il contenuto del file come un unico blocco di dimensione file_stat.st_size
     fread(contents, file_stat.st_size, 1, file);
+    // Chiudo il file
+    if(fclose(file) == -1) return -1;
 
     // Invio il contenuto del file al server
     if (writen((long)client_socket, (void*)contents, file_stat.st_size) == -1) {
@@ -323,9 +325,36 @@ int writeFile(const char* pathname, const char* dirname){
                 return -1;
             }
 
-            // Se il client ha specificato una cartella in cui salvare i file espulsi
+            // Se il client ha specificato una cartella in cui salvare i file espulsi,
+            //  procedo a salvare i file ricreando l'albero delle directories specificato nel pathname
             if(dirname){
-               // Salvo su file
+                // Creo il path completo per il salvataggio del file
+                // Calcolo la lunghezza del path indicato da dirname
+                size_t dirname_length = strlen(dirname);
+                char abs_path[4096]; // => dirname/victim_pathname, // TODO: MAX_PATH in linux/limits.h
+                memset(abs_path, 0, 4096);
+                
+                // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
+                //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
+                // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
+                int backslash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
+                // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
+                snprintf(abs_path, 4096, backslash ? "%s%s" : "%s/%s", dirname, victim_pathname);
+                printf("abs path %s\n", abs_path);
+
+                // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
+                //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
+                //  per poter contenere il file, in maniera ricorsiva. Un comportamento simile al comando 'mkdir -p <path>'
+                mkdir_p(abs_path);
+
+                // Salvo il contenuto del file sul disco
+                FILE* output_file = fopen(abs_path, "w");
+                if(!output_file) return -1;
+                if(fputs(victim_contents, output_file) == EOF){
+                    fclose(output_file);
+                    return -1;
+                }
+                if(fclose(output_file) == -1) return -1; 
             }
 
             free(contents);
@@ -357,6 +386,40 @@ int writeFile(const char* pathname, const char* dirname){
 
     return -1;
 }
+
+// ! 
+int mkdir_p(const char *path){
+    const size_t len = strlen(path);
+    char _path[4096]; // todo define
+    char *p; 
+
+    errno = 0;
+
+    // Copy string so its mutable
+    if (len > sizeof(_path)-1) {
+        errno = ENAMETOOLONG;
+        return -1; 
+    }   
+    strcpy(_path, path);
+
+    // Iterate the string
+    for (p = _path + 1; *p; p++) {
+        if (*p == '/') {
+            //Temporarily truncate
+            *p = '\0';
+
+            if (mkdir(_path, S_IRWXU) != 0) {
+                if (errno != EEXIST)
+                    return -1; 
+            }
+
+            *p = '/';
+        }
+    }   
+
+    return 0;
+}
+
 
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname){
     // Controllo la validità degli argomenti
