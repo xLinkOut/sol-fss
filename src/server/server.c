@@ -268,7 +268,36 @@ static void* worker(void* args) {
                 // Scrivo il contenuto del file all'intero dello storage
                 int victims_no = 0;
                 storage_file_t** victims = NULL;
-                api_exit_code = storage_write_file(worker_args->storage, pathname, contents, file_size, &victims_no, victims, fd_ready);
+                api_exit_code = storage_write_file(worker_args->storage, pathname, contents, file_size, &victims_no, &victims, fd_ready);
+
+                // Invio al client eventuali file espulsi
+                memset(response, 0, MESSAGE_LENGTH);
+                snprintf(response, MESSAGE_LENGTH, "%d", victims_no);
+                if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                    perror("Error: writen failedaaa");
+                    break;
+                }
+
+                if(victims_no > 0){
+                    // Invio al client i file espulsi
+                    for(int i=0;i<victims_no;i++){
+                        printf("Sending n.%d: %s %zd\n", i, victims[i]->name, victims[i]->size);
+                        // Invio al client il nome e la dimensione del file
+                        memset(response, 0, MESSAGE_LENGTH);
+                        snprintf(response, MESSAGE_LENGTH, "%s %d", victims[i]->name, victims[i]->size);
+                        if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                            perror("Error: writen failed");
+                            break;
+                        }
+
+                        // Invio al client il contenuto del file
+                        if (writen((long)fd_ready, (void*)victims[i]->contents, victims[i]->size) == -1) {
+                            perror("Error: writen failed");
+                            break;
+                        }
+                    }
+                }
+                
                 // Preparo il buffer per la risposta
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);

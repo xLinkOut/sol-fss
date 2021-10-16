@@ -270,6 +270,68 @@ int writeFile(const char* pathname, const char* dirname){
         return -1;
     }
 
+    // Ricevo dal server eventuali file espulsi
+    int victims_no = 0;
+    memset(message_buffer, 0, REQUEST_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        return -1;
+    }
+    if(sscanf(message_buffer, "%d", &victims_no) != 1){
+        errno = EBADMSG;
+        return -1;
+    }
+    
+    char victim_pathname[MESSAGE_LENGTH];
+    size_t victim_size = 0;
+    void* victim_contents = NULL;
+    char* token = NULL;
+    char* strtok_status = NULL;
+    int i = 0;
+
+    if(victims_no > 0){
+        for(;i<victims_no;i++){
+            // Ricevo dal server il nome e la dimensione del file
+            memset(message_buffer, 0, MESSAGE_LENGTH);
+            memset(victim_pathname,0,MESSAGE_LENGTH);
+            if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+                return -1;
+            }
+
+            // Pathname
+            token = strtok_r(message_buffer, " ", &strtok_status);
+            if (!token || sscanf(token, "%s", victim_pathname) != 1) {
+                errno = EBADMSG;
+                return -1;
+            }
+            // Size
+            token = strtok_r(NULL, " ", &strtok_status);
+            if (!token || sscanf(token, "%zd", &victim_size) != 1) {
+                errno = EBADMSG;
+                return -1;
+            }
+
+            printf("Receiving n.%d: %s %zd\n", i, victim_pathname, victim_size);
+
+            // Alloco spazio per il file
+            victim_contents = malloc(victim_size);
+            if(!victim_contents){
+                perror("malloc");
+                return -1;
+            }
+            memset(victim_contents, 0, victim_size);
+            if(readn((long)client_socket, (void*)victim_contents, victim_size) == -1){
+                return -1;
+            }
+
+            // Se il client ha specificato una cartella in cui salvare i file espulsi
+            if(dirname){
+               // Salvo su file
+            }
+
+            free(contents);
+        }
+    }
+
     // Leggo la risposta
     memset(message_buffer, 0, REQUEST_LENGTH);
     if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
