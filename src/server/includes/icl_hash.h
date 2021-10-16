@@ -11,6 +11,7 @@
 #define icl_hash_h
 
 #include <stdio.h>
+#include <constants.h>
 
 #if defined(c_plusplus) || defined(__cplusplus)
 extern "C" {
@@ -42,6 +43,8 @@ int icl_hash_destroy(icl_hash_t *, void (*)(void *), void (*)(void *)),
     icl_hash_dump(FILE *, icl_hash_t *);
 
 int icl_hash_delete(icl_hash_t *ht, void *key, void (*free_key)(void *), void (*free_data)(void *));
+
+void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* pathname);
 
 /* simple hash function */
 unsigned int

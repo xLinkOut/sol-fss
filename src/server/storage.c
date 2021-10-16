@@ -73,6 +73,7 @@ storage_file_t* storage_file_create(const char* name, const void* contents, size
         free(file);
         return NULL;
     }
+    memset(file->name, 0, sizeof(file->name));
     strncpy(file->name, name, strlen(name) + 1);
 
     // Salvo il contenuto del file
@@ -272,8 +273,8 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         //printf("Lo storage contiene %d files\n", storage->number_of_files);
 
         // ! DEBUG
-        storage_file_print(file); // Stampo alcune informazioni sul file
-        icl_hash_dump(stdout, storage->files); // Stampo il contenuto dello storage
+        //storage_file_print(file); // Stampo alcune informazioni sul file
+        //icl_hash_dump(stdout, storage->files); // Stampo il contenuto dello storage
 
         // Rilascio l'accesso in scrittura sullo storage
         rwlock_done_write(storage->rwlock);
@@ -345,11 +346,18 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     // Acquisisco l'accesso in lettura sullo storage
     rwlock_start_read(storage->rwlock);
 
+    // Prima di fare qualsiasi cosa, controllo che la dimensione del file che si vuole scrivere 
+    //  non sia maggiore della capienza massima dello storage
+    if(size > storage->max_capacity){
+        rwlock_done_read(storage->rwlock);
+        errno = ENOSPC;
+        return -1;
+    }
+
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
 
-    // Tutti i controlli del caso dovrebbero essere stati eseguiti dalla storage_eject_file
-    // Tuttavia, effettuo comunque un controllo
+    // Controllo che il file che si vuole scrivere esista nello storage
     if (!file) {
         rwlock_done_read(storage->rwlock);
         errno = ENOENT;
@@ -369,32 +377,35 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
 
     // Algoritmo di rimpiazzo
     *victims_no = 0;
-    victims = malloc(sizeof(storage_file_t*) * storage->number_of_files); // Al più, espello tutti i file
-    // Finché non c'è spazio sufficiente a contenere il nuovo file, seleziono file da espellere
-    while((storage->capacity - file->size) + size > storage->max_capacity){
+    victims = malloc(sizeof(storage_file_t*) * storage->number_of_files);  // Al più, rimuovo tutti i file presenti
+    
+    printf("%zd\t%zd\t%zd\t\t%zd\t%d\n", storage->capacity, file->size, size,(storage->capacity - file->size) + size, (storage->capacity - file->size) + size > storage->max_capacity);
+
+    // Finché non c'è spazio sufficiente a contenere il nuovo file, seleziono file da rimuovere
+    while ((storage->capacity - file->size) + size > storage->max_capacity) {
         // Seleziono il file da espellere
-        char* victim_name = "utils.c"; // icl_hash_get_victim(storage->files, storage->replacement_policy, pathname);
-        if(!victim_name){
+        storage_file_t* victim = (storage_file_t*)icl_hash_get_victim(storage->files, storage->replacement_policy, pathname);
+        //printf("we %zd\n", victims[*victims_no]->size);
+        if (!victim) {
             // Non è stato possibile espelle alcun file, scrittura annullata
         }
 
-        // Recupero il file dallo storage
-        storage_file_t* victim = icl_hash_find(storage->files, victim_name);
-        
         // Effettuo una copia del file per poterlo inviare al client
         victims[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
-
+        printf("%s\n", victim->name);
         // Elimino il file dallo storage
-        icl_hash_delete(storage->files, victim_name, NULL, &storage_file_destroy);
+        if(icl_hash_delete(storage->files, victim->name, NULL, &storage_file_destroy) == -1){
+            // Errore nella cancellazione del file
+            printf("Errore nella cancellazione del file\n");
+        }
         // Aggiorno le informazioni dello storage
-        storage->number_of_files--; // Decremento il numero di file nello storage
-        storage->capacity -= victims[*victims_no]->size; // Libero lo spazio occupato dal file rimosso
-
+        storage->number_of_files--;                       // Decremento il numero di file nello storage
+        storage->capacity -= victims[*victims_no]->size;  // Libero lo spazio occupato dal file rimosso
+        
         // Incremento il numero dei file espulsi
-        *victims_no++;
-
+        (*victims_no)++;
     }
-    
+
     printf("Victims number: %d\n", *victims_no);
     if(victims && victims[0]) printf("First victims: %s\n", victims[0]->name);
 
@@ -734,7 +745,7 @@ int storage_remove_file(storage_t* storage, const char* pathname, int client){
         return -1;
     }
     
-    icl_hash_dump(stdout, storage->files);
+    //icl_hash_dump(stdout, storage->files);
 
     // Aggiorno le informazioni dello storage
     storage->number_of_files--; // Decremento il numero di file nello storage

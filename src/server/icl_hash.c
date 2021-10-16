@@ -296,3 +296,29 @@ int icl_hash_dump(FILE *stream, icl_hash_t *ht) {
 
     return 0;
 }
+
+#include <time.h>
+#include <limits.h>
+#include <storage.h>
+
+void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* pathname){ 
+    if (!ht) return NULL; // todo errno
+    
+    icl_entry_t *bucket, *curr;
+
+    storage_file_t* victim_name = NULL;
+    time_t victim_creation_time = LONG_MAX;
+    time_t victim_last_use_time = LONG_MAX;
+    unsigned int victim_frequency = UINT_MAX;
+
+    for (int i = 0; i < ht->nbuckets; i++) {
+        bucket = ht->buckets[i];
+        for (curr = bucket; curr != NULL; curr = curr->next) {
+            if (curr->key){
+                fprintf(stdout, "icl_hash_get_victim: %s: %p\n", (char *)curr->key, curr->data);
+                if(strncmp(((storage_file_t*) (curr->data))->name, pathname, 4096) == 0) continue;
+                return (storage_file_t*) curr->data;
+            }
+        }
+    }
+}
