@@ -101,10 +101,4 @@ int storage_close_file(storage_t* storage, const char* pathname, int client);
 // * Cancella il file <pathname> dallo storage, se è stato lockato dal client
 int storage_remove_file(storage_t* storage, const char* pathname, int client);
 
-// * Espelle dallo storage uno o più files per poterne ospitare uno di dimensione <size>
-// * Ritorna il numero di file espulsi, 0 se non è stato necessario espelle file, -1 in caso di fallimento
-// * In <victims> verranno salvati i files espulsi dallo storage
-// TODO: victims sarà una linked list di <void*>, da castare opportunamente a <storage_file_t*>
-int storage_eject_file(storage_t* storage, const char* pathname, size_t size, int client, storage_file_t** victims);
-
 #endif
