@@ -43,6 +43,12 @@ storage_t* storage_create(size_t max_files, size_t max_capacity, replacement_pol
     storage->capacity = 0;
     storage->max_capacity = max_capacity;
 
+    // Inizializzo le statistiche
+    storage->start_timestamp = time(NULL);
+    storage->max_files_reached = 0;
+    storage->max_capacity_reached = 0;
+    storage->rp_algorithm_counter = 0;
+
     // Ritorno un puntatore allo storage
     return storage;
 }
@@ -270,6 +276,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
 
         // Aggiorno le informazioni dello storage
         storage->number_of_files++; // Incremento il numero di file presenti nello storage
+        storage->max_files_reached = MAX(storage->max_files_reached, storage->number_of_files);
         //printf("Lo storage contiene %d files\n", storage->number_of_files);
 
         // ! DEBUG
@@ -444,6 +451,8 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     // Sottraggo alla capacità dello storage quella occupata dal file che eventualmente ho sovrascritto,
     // quindi sommo la dimensione del nuovo file caricato
     storage->capacity = (storage->capacity - old_size) + size;
+    storage->max_capacity_reached = MAX(storage->max_capacity_reached, storage->capacity);
+    if(*victims_no > 0) storage->rp_algorithm_counter++;
     //printf("Lo storage occupa %d bytes\n", storage->capacity);
 
     // Rilascio l'accesso in scrittura sullo storage
@@ -512,6 +521,7 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
 
     // Aggiorno le informazioni dello storage
     storage->capacity += size; // Sommo la dimensione del contenuto aggiunto
+    storage->max_capacity_reached = MAX(storage->max_capacity_reached, storage->capacity);
     //printf("Lo storage occupa %d bytes\n", storage->capacity);
 
     // Rilascio l'accesso in scrittura sullo storage

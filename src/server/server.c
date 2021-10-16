@@ -899,6 +899,19 @@ int main(int argc, char* argv[]) {
 
     // ! EXIT
     // Stampo un sommario delle operazioni effettuate
+    printf(
+        "Some storage statistics:\n"
+        "+ Server start @ %ld, shutdown @ %ld\n"
+        "+ Max files stored: %zd\n"
+        "+ Max space used: %zd\n"
+        "+ Replacement algorithm executed %zd times\n\n"
+        "+ At shutdown, these files are inside the storage:\n",
+        storage->start_timestamp, time(NULL),
+        storage->max_files_reached, storage->max_capacity_reached,
+        storage->rp_algorithm_counter
+    );
+
+    // storage_print
 
     // Mi assicuro che tutti i threads spawnati siano terminati
     // Prima il signal handler thread, che è il primo a terminare
@@ -909,11 +922,6 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < THREADS_WORKER; i++) pthread_join(thread_pool[i], NULL);
     // E libero la memoria per la pool
     free(thread_pool);
-
-    // Libero la memoria prima di uscire
-    free(CONFIG_PATH);
-    free(SOCKET_PATH);
-    free(LOG_PATH);
 
     // Chiudo i socket
     close(server_socket);
@@ -928,7 +936,7 @@ int main(int argc, char* argv[]) {
 
     // Elimino il socket file
     unlink(SOCKET_PATH);
-
+    
     // Log di chiusura
     log_event("INFO", " == Server shutdown == ");
 
@@ -937,6 +945,11 @@ int main(int argc, char* argv[]) {
         perror("Error: failed to close log file");
         return errno;
     }
+
+    // Libero la memoria prima di uscire
+    free(CONFIG_PATH);
+    free(SOCKET_PATH);
+    free(LOG_PATH);
 
     return EXIT_SUCCESS;
 }

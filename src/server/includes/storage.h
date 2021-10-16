@@ -20,6 +20,12 @@ typedef struct Storage {
     size_t max_files;        // Numero di files massimo memorizzabile, pari a STORAGE_MAX_FILES
     size_t capacity;         // Spazio attualmente occupato dai files, parte da 0 fino a <max_capacity>
     size_t max_capacity;     // Spazio massimo disponibile, pari a STORAGE_MAX_CAPACITY
+
+    // Statistiche
+    time_t start_timestamp;       // Istante di tempo di inizio attività del server
+    size_t max_files_reached;     // Numero massimo di file memorizzati nello storage
+    size_t max_capacity_reached;  // Capienza massima raggiunta nello storage
+    size_t rp_algorithm_counter;  // Numero di esecuzioni dell'algoritmo di rimpiazzo
 } storage_t;
 
 // * Struttura dati di un generico file memorizzato nello storage
