@@ -14,7 +14,7 @@
 // Imposto il socket con un valore negativo, e.g. 'non connesso'
 int client_socket = -1;
 // Buffer per memorizzare i dati da inviare al server
-char message_buffer[REQUEST_LENGTH];
+char message_buffer[MESSAGE_LENGTH];
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime) {
     // Controllo la validità degli argomenti
@@ -68,11 +68,11 @@ int closeConnection(const char* sockname){
 
     // Mando al server un messaggio di uscita
     // Svuoto il buffer di comunicazione
-    memset(message_buffer, 0, REQUEST_LENGTH);
+    memset(message_buffer, 0, MESSAGE_LENGTH);
     // Scrivo nel buffer il comando per chiudere la connessione
-    snprintf(message_buffer, REQUEST_LENGTH, "%d", DISCONNECT);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d", DISCONNECT);
     // Invio il messaggio al server
-    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
@@ -102,17 +102,17 @@ int openFile(const char* pathname, int flags){
     }
 
     // Preparo la richiesta da inviare
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    snprintf(message_buffer, REQUEST_LENGTH, "%d %s %d", OPEN, pathname, flags);
-    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %d", OPEN, pathname, flags);
+    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
     printf("openFile sent\n");
 
     // Leggo la risposta
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
@@ -150,17 +150,17 @@ int readFile(const char* pathname, void** buf, size_t* size){
     }
 
     // Invio al server la richiesta di READ
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    snprintf(message_buffer, REQUEST_LENGTH, "%d %s", READ, pathname);
-    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s", READ, pathname);
+    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
     printf("readFile sent\n");
 
     // Ricevo dal server un messaggio di conferma e, se il file è stato trovato, la sua dimensione
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
     char* strtok_status = NULL;
@@ -195,8 +195,8 @@ int readFile(const char* pathname, void** buf, size_t* size){
     }
     //printf("\t%s\n", (char*)*buf);
      // Leggo la risposta
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
@@ -251,9 +251,9 @@ int writeFile(const char* pathname, const char* dirname){
     }
 
     // Invio al server la richiesta di WRITE, il pathname e la dimensione del file
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    snprintf(message_buffer, REQUEST_LENGTH, "%d %s %lld", WRITE, pathname, file_stat.st_size);
-    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %lld", WRITE, pathname, file_stat.st_size);
+    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
@@ -274,8 +274,8 @@ int writeFile(const char* pathname, const char* dirname){
 
     // Ricevo dal server eventuali file espulsi
     int victims_no = 0;
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
     if(sscanf(message_buffer, "%d", &victims_no) != 1){
@@ -362,8 +362,8 @@ int writeFile(const char* pathname, const char* dirname){
     }
 
     // Leggo la risposta
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
@@ -401,9 +401,9 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     }
 
     // Invio al server la richiesta di APPEND, il pathname e la dimensione del file
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    snprintf(message_buffer, REQUEST_LENGTH, "%d %s %lld", APPEND, pathname, size);
-    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %lld", APPEND, pathname, size);
+    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
@@ -411,8 +411,8 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
     /* // Attendo di ricevere il numero di file espulsi
     int victims_no = 0;
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
     if(sscanf(message_buffer, "%d", &victims_no) != 1){
@@ -428,9 +428,9 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
     while(victims_no > 0){
         // Leggo il pathname e la dimensione del file espulso
-        memset(message_buffer, 0, REQUEST_LENGTH);
+        memset(message_buffer, 0, MESSAGE_LENGTH);
         memset(victim_pathname, 0, MESSAGE_LENGTH);
-        if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+        if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
             return -1;
         }
         // Pathname
@@ -482,8 +482,8 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     }
 
     // Leggo la risposta
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
@@ -522,17 +522,17 @@ int lockFile(const char* pathname){
     }
 
     // Preparo la richiesta da inviare
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    snprintf(message_buffer, REQUEST_LENGTH, "%d %s", LOCK, pathname);
-    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s", LOCK, pathname);
+    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
     printf("lockFile sent\n");
 
     // Leggo la risposta
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
@@ -570,17 +570,17 @@ int unlockFile(const char* pathname){
     }
 
     // Preparo la richiesta da inviare
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    snprintf(message_buffer, REQUEST_LENGTH, "%d %s", UNLOCK, pathname);
-    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s", UNLOCK, pathname);
+    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
     printf("unlockFile sent\n");
 
     // Leggo la risposta
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
@@ -618,17 +618,17 @@ int closeFile(const char* pathname){
     }
 
     // Preparo la richiesta da inviare
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    snprintf(message_buffer, REQUEST_LENGTH, "%d %s", CLOSE, pathname);
-    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s", CLOSE, pathname);
+    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
     printf("closeFile sent\n");
 
     // Leggo la risposta
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
@@ -666,17 +666,17 @@ int removeFile(const char* pathname){
     }
 
     // Preparo la richiesta da inviare
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    snprintf(message_buffer, REQUEST_LENGTH, "%d %s", REMOVE, pathname);
-    if(writen((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s", REMOVE, pathname);
+    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
     printf("removeFile sent\n");
 
     // Leggo la risposta
-    memset(message_buffer, 0, REQUEST_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, REQUEST_LENGTH) == -1){
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 

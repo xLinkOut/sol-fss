@@ -98,14 +98,7 @@ static void* worker(void* args) {
     char request[MESSAGE_LENGTH];   // Messaggio richiesta del client
     char response[MESSAGE_LENGTH];  // Messaggio risposta del server
     char pathname[MESSAGE_LENGTH];  // Quasi ogni API call prevede un pathname
-    /*
-    char request = malloc(sizeof(char) * REQUEST_LENGTH);
-    char* response = malloc(sizeof(char) * REQUEST_LENGTH);
-    if (!request || !response) {
-        perror("Error: failed to allocate memory for request or response");
-        return NULL;  // ? pthread_exit ?
-    }
-    */
+    
     // ! MAIN WORKER LOOP
     // TODO: condizione while, eseguo finché !force_stop, ma nel caso di stop? Come faccio a eseguire finché i client non finiscono?
     while (1) {
@@ -131,9 +124,9 @@ static void* worker(void* args) {
         //printf("Worker on %d\n", fd_ready);
 
         // Pulisco tracce di eventuali richieste precedenti
-        memset(request, 0, REQUEST_LENGTH);
+        memset(request, 0, MESSAGE_LENGTH);
         // Leggo il contenuto della richiesta del client
-        if (readn((long)fd_ready, (void*)request, REQUEST_LENGTH) == -1) {
+        if (readn((long)fd_ready, (void*)request, MESSAGE_LENGTH) == -1) {
             fprintf(stderr, "Error: read on client failed\n");
             return NULL;
         }
@@ -490,8 +483,8 @@ static void* worker(void* args) {
             case DISCONNECT:  // * closeConnection
                 // Un client ha richiesto la chiusura della connessione
                 // Lo comunico al thread dispatcher tramite la pipe
-                memset(response, 0, REQUEST_LENGTH);
-                snprintf(response, REQUEST_LENGTH, "%d", CLIENT_LEFT);
+                memset(response, 0, MESSAGE_LENGTH);
+                snprintf(response, MESSAGE_LENGTH, "%d", CLIENT_LEFT);
                 if (writen((long)worker_args->pipe_output, (void*)response, PIPE_LEN) == -1) {
                     perror("Error: writen failed");
                     break;
@@ -513,7 +506,6 @@ static void* worker(void* args) {
         }
     }
 
-    //free(request);
     return NULL;
 }
 
