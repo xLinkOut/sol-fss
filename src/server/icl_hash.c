@@ -317,10 +317,12 @@ void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* p
             if (curr->key){
                 // Se incontro proprio il file che sto tentando di scrivere, lo salto
                 if(strcmp(((storage_file_t*) (curr->data))->name, pathname) == 0){curr = curr->next; continue;}
-                // TODO: controllare che i file non siano aperti in lettura/scrittura da altri client
 
                 // Logica dell'algoritmo di rimpiazzo, in base alla politica scelta in fase di configurazione
                 storage_file_t* current_file = (storage_file_t*) curr->data;
+                
+                // TODO: controllare che i file non siano aperti in lettura/scrittura da altri client
+                
                 switch(rp){
                     case FIFO:
                         // Viene selezionato il file presente nello storage da più tempo,
@@ -335,6 +337,14 @@ void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* p
                         //  ovvero quello con last use time più basso
                         if(current_file->last_use_time < victim_last_use_time){
                             victim_last_use_time = current_file->last_use_time;
+                            victim_name = current_file;
+                        }
+                        break;
+                    case LFU:
+                        // Viene selezionato il file utilizzato meno frequentemente,
+                        //  ovvero quello con frequency più basso
+                        if(current_file->frequency < victim_frequency){
+                            victim_frequency = current_file->frequency;
                             victim_name = current_file;
                         }
                         break;
