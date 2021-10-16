@@ -313,12 +313,26 @@ void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* p
 
     for (int i = 0; i < ht->nbuckets; i++) {
         bucket = ht->buckets[i];
-        for (curr = bucket; curr != NULL; curr = curr->next) {
+        for (curr = bucket; curr != NULL;) {
             if (curr->key){
-                fprintf(stdout, "icl_hash_get_victim: %s: %p\n", (char *)curr->key, curr->data);
-                if(strncmp(((storage_file_t*) (curr->data))->name, pathname, 4096) == 0) continue;
-                return (storage_file_t*) curr->data;
+                // Se incontro proprio il file che sto tentando di scrivere, lo salto
+                if(strcmp(((storage_file_t*) (curr->data))->name, pathname) == 0){curr = curr->next; continue;}
+                // Logica dell'algoritmo di rimpiazzo, in base alla politica scelta in fase di configurazione
+                storage_file_t* current_file = (storage_file_t*) curr->data;
+                switch(rp){
+                    case FIFO:
+                        // Viene selezionato il file presente nello storage da più tempo,
+                        //  ovvero quello con creation time più basso
+                        if(current_file->creation_time < victim_creation_time){
+                            victim_creation_time = current_file->creation_time;
+                            victim_name = current_file;
+                        }
+                        break;
+                }
             }
+            curr = curr->next;
         }
     }
+
+    return victim_name;
 }
