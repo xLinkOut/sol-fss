@@ -4,21 +4,22 @@
 #ifndef _CONSTANTS_H_
 #define _CONSTANTS_H_
 
-// Gestione di flags
-#define SET_FLAG(mask, flag) mask |= flag
-#define RESET_MASK(mask) mask = 0
-
 // Flags per la openFile
 #define O_CREATE 1
 #define O_LOCK 2
+// Gestione di flags
+#define SET_FLAG(mask, flag) mask |= flag
+#define RESET_MASK(mask) mask = 0
 #define IS_O_CREATE(mask) (mask & 1)
 #define IS_O_LOCK(mask) ((mask >> 1) & 1)
 
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
 // Lunghezza massima di un qualsiasi messaggio scambiato tra client e server
+#define PIPE_LEN 16
+#define CLIENT_LEFT 0
+#define BUFFER_SIZE 1024
+#define REQUEST_LENGTH 2048
 #define MESSAGE_LENGTH 2048
+#define CONCURRENT_CONNECTIONS 8
 
 typedef enum ReplacementPolicy {
     FIFO,

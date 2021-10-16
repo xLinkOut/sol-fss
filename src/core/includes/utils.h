@@ -5,11 +5,8 @@
 
 #include <stdlib.h>
 
-#define PIPE_LEN 16
-#define CLIENT_LEFT 0
-#define BUFFER_SIZE 1024
-#define REQUEST_LENGTH 2048
-#define CONCURRENT_CONNECTIONS 8
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 #define LOCK(lock)                               \
     if (pthread_mutex_lock(lock) != 0) {         \

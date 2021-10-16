@@ -9,6 +9,7 @@
 #include <string.h>
 #include <rwlock.h>
 #include <time.h>
+#include <utils.h>
 
 storage_t* storage_create(size_t max_files, size_t max_capacity, replacement_policy_t rp) {
     // Controllo la validità degli argomenti
