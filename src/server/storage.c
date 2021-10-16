@@ -260,7 +260,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         if(lock_flag) file->writer = client;
 
         // Inserisco il file nello storage
-        if(!icl_hash_insert(storage->files, pathname, file)){
+        if(!icl_hash_insert(storage->files, file->name, file)){
             // Se l'inserimento nello storage fallisce, libero la memoria e ritorno errore
             storage_file_destroy(file);
             rwlock_done_write(storage->rwlock);
