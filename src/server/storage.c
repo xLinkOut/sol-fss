@@ -470,7 +470,7 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     return 0;
 }
 
-int storage_append_to_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int client){
+int storage_append_to_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client){
     // Controllo la validità degli argomenti
     if (!storage || !pathname || !contents || size <= 0) {
         errno = EINVAL;
@@ -482,12 +482,8 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
 
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, pathname);
-    
-    // Rilascio l'accesso in lettura sullo storage
-    rwlock_done_read(storage->rwlock);
 
-    // Tutti i controlli del caso dovrebbero essere stati eseguiti dalla storage_eject_file
-    // Tuttavia, effettuo comunque un controllo
+    // Controllo che il file che si vuole scrivere esista nello storage
     if (!file) {
         errno = ENOENT;
         return -1;
@@ -496,12 +492,62 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
     // Acquisisco l'accesso in lettura sul file
     rwlock_start_read(file->rwlock);
     
-    // Controllo nuovamente che il file sia stato aperto in scrittura dal client
-    if(file->writer != 0 && file->writer != client){
+    // Controllo che la dimensione (totale) del file non sia maggiore della capienza massima dello storage
+    if(file->size + size > storage->max_capacity){
         rwlock_done_read(file->rwlock);
+        rwlock_done_read(storage->rwlock);
+        errno = ENOSPC;
+        return -1;
+    }
+    
+    // Controllo che il file sia stato aperto in scrittura dal client
+    if(file->writer != client){
+        rwlock_done_read(file->rwlock);
+        rwlock_done_read(storage->rwlock);
         errno = EPERM;
         return -1;
     }
+
+    // Algoritmo di rimpiazzo
+    *victims_no = 0;
+    *victims = malloc(sizeof(storage_file_t*) * storage->number_of_files);  // Al più, rimuovo tutti i file presenti
+    
+    // Finché non c'è spazio sufficiente a contenere il nuovo file, seleziono file da rimuovere
+    while (storage->capacity + size > storage->max_capacity) {
+        // Seleziono il file da espellere
+        storage_file_t* victim = (storage_file_t*)icl_hash_get_victim(storage->files, storage->replacement_policy, pathname);
+
+        if (!victim) {
+            // Non è stato possibile espelle alcun file, scrittura annullata
+            rwlock_done_read(file->rwlock);
+            rwlock_done_read(storage->rwlock);
+            errno = ECANCELED;
+            return -1;
+        }
+
+        // Effettuo una copia del file per poterlo inviare al client
+        *victims[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
+
+        // Elimino il file dallo storage
+        if(icl_hash_delete(storage->files, victim->name, NULL, &storage_file_destroy) == -1){
+            // Errore nella cancellazione del file
+            printf("Errore nella cancellazione del file\n");
+        }
+
+        // Aggiorno le informazioni dello storage
+        storage->number_of_files--;                       // Decremento il numero di file nello storage
+        storage->capacity -= (*victims)[*victims_no]->size;  // Libero lo spazio occupato dal file rimosso
+        
+        // Incremento il numero dei file espulsi
+        (*victims_no)++;
+    }
+
+    printf("Victims number: %d\n", *victims_no);
+    if(*victims && *victims_no > 0)
+        for(int i=0;i < *victims_no;i++)
+            printf("Victim n.%d: %s %d %p\n", i, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
+
+    if(*victims_no == 0) free(*victims);
 
     // Rilascio l'accesso in lettura sul file
     rwlock_done_read(file->rwlock);
@@ -515,18 +561,18 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
     // Aggiungo <contents> partendo dalla fine di <file->contents>
     memcpy(file->contents + file->size, contents, size);
 
+    // Aggiorno la dimensione del file
+    file->size += size;
     // Aggioro le statistiche del file
     file->last_use_time = time(NULL);
     file->frequency++;
 
-    // Rilascio l'accesso in scrittura sul file
-    rwlock_done_write(file->rwlock);
-
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
     // Acquisisco l'accesso in scrittura sullo storage
     rwlock_start_write(storage->rwlock);
- 
-    // Aggiorno la dimensione del file
-    file->size += size;
+    // Rilascio l'accesso in scrittura sul file
+    rwlock_done_write(file->rwlock);
 
     // Aggiorno le informazioni dello storage
     storage->capacity += size; // Sommo la dimensione del contenuto aggiunto
