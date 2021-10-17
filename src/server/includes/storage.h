@@ -69,6 +69,9 @@ storage_t* storage_create(size_t max_files, size_t max_capacity, replacement_pol
 // * Cancella uno storage creato con storage_create
 void storage_destroy(storage_t* storage);
 
+// * Visualizza i file contenuti nello storage
+void storage_print(storage_t* storage);
+
 // * Inizializza uno storage file e ritorna un puntatore ad esso
 storage_file_t* storage_file_create(const char* name, const void* contents, size_t size);
 

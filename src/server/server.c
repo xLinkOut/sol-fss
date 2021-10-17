@@ -903,8 +903,9 @@ int main(int argc, char* argv[]) {
         storage->rp_algorithm_counter
     );
 
-    // storage_print
-
+    // Visualizzo i file presenti nello storage al momento dell'arresto
+    storage_print(storage);
+    
     // Mi assicuro che tutti i threads spawnati siano terminati
     // Prima il signal handler thread, che è il primo a terminare
     pthread_join(thread_signal_handler, NULL);

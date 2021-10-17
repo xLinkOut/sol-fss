@@ -135,6 +135,14 @@ void storage_file_destroy(storage_file_t* file) {
     free(file);
 }
 
+void storage_print(storage_t* storage){
+    if(!storage) return;
+    if(storage->number_of_files == 0)
+        printf("Storage is empty!\n");
+    else
+        icl_hash_print(storage->files);
+}
+
 void storage_file_print(storage_file_t* file) {
     if (!file) return;
     printf("%s (%zd Bytes)\nWriter: [%d], Readers: ", file->name, file->size, file->writer);
