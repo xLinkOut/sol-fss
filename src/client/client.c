@@ -1,6 +1,7 @@
 // @author Luca Cirillo (545480)
 
 #include <API.h>
+#include <constants.h>
 #include <errno.h>
 #include <getopt.h>
 #include <request_queue.h>
@@ -218,21 +219,56 @@ int main(int argc, char* argv[]) {
         perror("Error: failed to initiate socket connection");
         return errno;
     }
-    if(VERBOSE) printf("Connection established correctly to '%s'\n", SOCKET_PATH);
+    if (VERBOSE) printf("Connection established correctly to '%s'\n", SOCKET_PATH);
 
     // * Esecuzione delle richieste, in ordine FIFO
-    /*
-    while((request = queue_pop(request_queue))){
-        printf("%c\n", request->command);
+    char* token = NULL;
+    char* strtok_status = NULL;
+
+    while ((request = queue_pop(request_queue))) {
+        printf("%c %s (%s, %lu)\n", request->command, request->arguments, request->dirname, request->time);
+        switch (request->command) {
+            case 'W':  // Invio al server un(a lista di) file
+                // Possono essere specificati più file separati da virgola
+                token = strtok_r(request->arguments, ",", &strtok_status);
+                while (token) {
+                    printf("Sending %s...\n", token);
+                    if (openFile(token, O_CREATE | O_LOCK) == -1) {
+                        perror("Error: can't open the file, skip it");
+                        // Non avendo aperto correttamente il file, evito di proseguire
+                        continue;
+                    }
+
+                    if (writeFile(token, request->dirname) == -1) {
+                        perror("Error: cannot write the contents of the file");
+                    }
+
+                    if (closeFile(token) == -1) {
+                        perror("Error: something went wrong while closing the file");
+                    }
+
+                    token = strtok_r(NULL, ",", &strtok_status);
+                }
+                break;
+        }
+
+        // Se -t è stato specificato, mi fermo per il tempo specificato tra una richiesta e la successiva
+        if (request->time > 0) {  // TODO: && !last_request
+            // Struttura dati per la nanosleep
+            struct timespec sleep_time = {
+                .tv_sec = request->time >= 1000 ? request->time / 1000 : 0,    // Se l'attesa è maggiore di un secondo, uso proprio i secondi come misura
+                .tv_nsec = request->time < 1000 ? request->time * 1000000 : 0  // Altrimenti, uso i nanosecondi
+            };
+            nanosleep(&sleep_time, NULL);  // Aspetto per request->time millisecondi
+        }
     }
-    */
 
     // * Chiusura della connessione con il server
-    if(closeConnection(SOCKET_PATH) == -1){
+    if (closeConnection(SOCKET_PATH) == -1) {
         perror("Error: failed to close socket connection");
         return errno;
     }
-    if(VERBOSE) printf("Connection on '%s' closed\n", SOCKET_PATH);
+    if (VERBOSE) printf("Connection on '%s' closed\n", SOCKET_PATH);
 
     return EXIT_SUCCESS;
 }
