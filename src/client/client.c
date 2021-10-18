@@ -331,7 +331,7 @@ int main(int argc, char* argv[]) {
         }
 
         // Se -t è stato specificato, mi fermo per il tempo specificato tra una richiesta e la successiva
-        if (request->time > 0) {  // TODO: && !last_request
+        if (request->time > 0 && request_queue->length != 0) { // Tuttavia, non aspetto se non ci sono ci sono più richieste da elaborare
             // Struttura dati per la nanosleep
             struct timespec sleep_time = {
                 .tv_sec = request->time >= 1000 ? request->time / 1000 : 0,    // Se l'attesa è maggiore di un secondo, uso proprio i secondi come misura
