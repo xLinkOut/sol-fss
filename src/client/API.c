@@ -111,7 +111,7 @@ int openFile(const char* pathname, int flags){
         return -1;
     }
 
-    printf("openFile sent\n");
+    if(VERBOSE) printf("Request to open '%s' file... \n", pathname);
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
@@ -126,14 +126,13 @@ int openFile(const char* pathname, int flags){
         return -1;
     }
 
-    // TODO: if(VERBOSE)
     switch(status){
         case SUCCESS:
-            printf("openFile success\n");
+            if (VERBOSE) printf("File opened successfully!\n");
             return 0;
-            break;
+        
         default:
-            fprintf(stderr, "Something went wrong\n");
+            if (VERBOSE) printf("Something went wrong!\n");
     }
 
     return -1;
@@ -159,7 +158,7 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
         return -1;
     }
 
-    printf("readFile sent\n");
+    if (VERBOSE) printf("Request to read '%s' file...\n", pathname);
 
     // Ricevo dal server un messaggio di conferma e, se il file è stato trovato, la sua dimensione
     memset(message_buffer, 0, MESSAGE_LENGTH);
@@ -211,7 +210,6 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
         int backslash = dirname[dirname_length-1] == '/' || pathname[0] == '/';
         // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
         snprintf(abs_path, 4096, backslash ? "%s%s" : "%s/%s", dirname, pathname);
-        printf("abs path %s\n", abs_path);
 
         // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
         //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
@@ -225,7 +223,8 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
             fclose(output_file);
             return -1;
         }
-        if(fclose(output_file) == -1) return -1; 
+        if(fclose(output_file) == -1) return -1;
+        if(VERBOSE) printf("%zd bytes saved to '%s'!\n", *size, abs_path);
     }
 
      // Leggo la risposta
@@ -241,14 +240,13 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
         return -1;
     }
 
-    // TODO: if(VERBOSE)
     switch(status){
         case SUCCESS:
-            printf("readFile success\n");
+            if (VERBOSE) printf("Successfully read %zd bytes!\n", *size);
             return 0;
-            break;
+        
         default:
-            fprintf(stderr, "Something went wrong\n");
+            if (VERBOSE) printf("Something went wrong!\n");
     }
 
     return -1;
@@ -291,7 +289,7 @@ int writeFile(const char* pathname, const char* dirname){
         return -1;
     }
 
-    printf("WRITE: %s %zd\n", pathname, file_stat.st_size);
+    if(VERBOSE) printf("Request to write %lld bytes in '%s' file...\n", file_stat.st_size, pathname);
 
     // Alloco la memoria necessaria per leggere il file
     void* contents = malloc(file_stat.st_size);
@@ -302,7 +300,6 @@ int writeFile(const char* pathname, const char* dirname){
 
     // Invio il contenuto del file al server
     if (writen((long)client_socket, (void*)contents, file_stat.st_size) == -1) {
-        perror("Error: writen failed");
         return -1;
     }
 
@@ -325,6 +322,7 @@ int writeFile(const char* pathname, const char* dirname){
     int i = 0;
 
     if(victims_no > 0){
+        if (VERBOSE) printf("%d file(s) have been ejected from the server\n", victims_no);
         for(;i<victims_no;i++){
             // Ricevo dal server il nome e la dimensione del file
             memset(message_buffer, 0, MESSAGE_LENGTH);
@@ -346,7 +344,7 @@ int writeFile(const char* pathname, const char* dirname){
                 return -1;
             }
 
-            printf("Receiving n.%d: %s %zd\n", i, victim_pathname, victim_size);
+            if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i, victim_size, victim_pathname);
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
@@ -373,8 +371,7 @@ int writeFile(const char* pathname, const char* dirname){
                 // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
                 int backslash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
                 // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
-                snprintf(abs_path, 4096, backslash ? "%s%s" : "%s/%s", dirname, victim_pathname);
-                printf("abs path %s\n", abs_path);
+                snprintf(abs_path, 4096, backslash ? "%s%s" : "%s/%s", dirname, victim_pathname);\
 
                 // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
                 //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
@@ -389,6 +386,7 @@ int writeFile(const char* pathname, const char* dirname){
                     return -1;
                 }
                 if(fclose(output_file) == -1) return -1; 
+                if(VERBOSE) printf("%zd bytes saved to '%s'!\n", victim_size, abs_path);
             }
 
             free(contents);
@@ -408,14 +406,13 @@ int writeFile(const char* pathname, const char* dirname){
         return -1;
     }
 
-    // TODO: if(VERBOSE)
     switch(status){
         case SUCCESS:
-            printf("writeFile success\n");
+           if (VERBOSE) printf("%lld bytes written successfully!\n", file_stat.st_size);
             return 0;
-            break;
+
         default:
-            fprintf(stderr, "Something went wrong\n");
+            if(VERBOSE) printf("Something went wrong!\n");
     }
 
     return -1;
@@ -436,16 +433,15 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
     // Invio al server la richiesta di APPEND, il pathname e la dimensione del file
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %lld", APPEND, pathname, size);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %zd", APPEND, pathname, size);
     if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
-    printf("APPEND: %s %zd\n", pathname, size);
+    if(VERBOSE) printf("Request to append %zd bytes to '%s' file...\n", size, pathname);
     
     // Invio il contenuto del file che voglio scrivere
     if (writen((long)client_socket, (void*)buf, size) == -1) {
-        perror("Error: writen failed");
         return -1;
     }
 
@@ -468,6 +464,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     int i = 0;
 
     if(victims_no > 0){
+        if (VERBOSE) printf("%d file(s) have been ejected from the server\n", victims_no);
         for(;i<victims_no;i++){
             // Ricevo dal server il nome e la dimensione del file
             memset(message_buffer, 0, MESSAGE_LENGTH);
@@ -489,7 +486,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
                 return -1;
             }
 
-            printf("Receiving n.%d: %s %zd\n", i, victim_pathname, victim_size);
+            if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i, victim_size, victim_pathname);
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
@@ -517,7 +514,6 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
                 int backslash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
                 // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
                 snprintf(abs_path, 4096, backslash ? "%s%s" : "%s/%s", dirname, victim_pathname);
-                printf("abs path %s\n", abs_path);
 
                 // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
                 //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
@@ -532,6 +528,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
                     return -1;
                 }
                 if(fclose(output_file) == -1) return -1; 
+                if(VERBOSE) printf("%zd bytes saved to '%s'!\n", victim_size, abs_path);
             }
 
             free(victim_contents);
@@ -551,14 +548,13 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
         return -1;
     }
 
-    // TODO: if(VERBOSE)
     switch(status){
         case SUCCESS:
-            printf("appendToFile success\n");
+           if (VERBOSE) printf("%zd bytes added successfully!\n", size);
             return 0;
-            break;
+
         default:
-            fprintf(stderr, "Something went wrong\n");
+            if(VERBOSE) printf("Something went wrong!\n");
     }
 
     return -1;
@@ -585,7 +581,7 @@ int lockFile(const char* pathname){
         return -1;
     }
 
-    printf("lockFile sent\n");
+    if(VERBOSE) printf("Request to lock '%s' file...\n", pathname);
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
@@ -600,16 +596,14 @@ int lockFile(const char* pathname){
         return -1;
     }
 
-    // TODO: if(VERBOSE)
     switch(status){
         case SUCCESS:
-            printf("lockFile success\n");
+           if (VERBOSE) printf("File locked successfully!\n");
             return 0;
-            break;
-        default:
-            fprintf(stderr, "Something went wrong\n");
-    }
 
+        default:
+            if(VERBOSE) printf("Something went wrong!\n");
+    }
     return -1;
 }
 
@@ -633,7 +627,7 @@ int unlockFile(const char* pathname){
         return -1;
     }
 
-    printf("unlockFile sent\n");
+    if(VERBOSE) printf("Request to unlock '%s' file...\n", pathname);
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
@@ -648,14 +642,13 @@ int unlockFile(const char* pathname){
         return -1;
     }
 
-    // TODO: if(VERBOSE)
     switch(status){
         case SUCCESS:
-            printf("unlockFile success\n");
+           if (VERBOSE) printf("File unlocked successfully!\n");
             return 0;
-            break;
+
         default:
-            fprintf(stderr, "Something went wrong\n");
+            if(VERBOSE) printf("Something went wrong!\n");
     }
 
     return -1;
@@ -681,7 +674,7 @@ int closeFile(const char* pathname){
         return -1;
     }
 
-    printf("closeFile sent\n");
+    if(VERBOSE) printf("Request to close '%s' file... \n", pathname);
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
@@ -696,16 +689,14 @@ int closeFile(const char* pathname){
         return -1;
     }
 
-    // TODO: if(VERBOSE)
     switch(status){
         case SUCCESS:
-            printf("closeFile success\n");
+            if (VERBOSE) printf("File closed successfully!\n");
             return 0;
-            break;
+        
         default:
-            fprintf(stderr, "Something went wrong\n");
+            if (VERBOSE) printf("Something went wrong!\n");
     }
-
     return -1;
 }
 
@@ -729,7 +720,7 @@ int removeFile(const char* pathname){
         return -1;
     }
 
-    printf("removeFile sent\n");
+    if(VERBOSE) printf("Request to remove '%s' file... \n", pathname);
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
@@ -744,14 +735,13 @@ int removeFile(const char* pathname){
         return -1;
     }
 
-    // TODO: if(VERBOSE)
     switch(status){
         case SUCCESS:
-            printf("removeFile success\n");
+            if (VERBOSE) printf("File removed successfully!\n");
             return 0;
-            break;
+        
         default:
-            fprintf(stderr, "Something went wrong\n");
+            if (VERBOSE) printf("Something went wrong!\n");
     }
 
     return -1;

@@ -234,7 +234,6 @@ int main(int argc, char* argv[]) {
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
-                    printf("Sending %s...\n", filename);
                     if (openFile(filename, O_CREATE | O_LOCK) == -1) {
                         perror("Error: can't open the file, skip it");
                         // Non avendo aperto correttamente il file, evito di proseguire
@@ -258,7 +257,6 @@ int main(int argc, char* argv[]) {
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
-                    printf("Sending %s...\n", filename);
                     if (openFile(filename, 0) == -1) { // TODO: O_READ
                         perror("Error: can't open the file, skip it");
                         // Non avendo aperto correttamente il file, evito di proseguire
@@ -282,7 +280,6 @@ int main(int argc, char* argv[]) {
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
-                    printf("Locking %s...\n", filename);
                     // Si suppone che il file sia già stato aperto in lettura dal client
                     openFile(filename, 0);
                     if (lockFile(filename) == -1) {
@@ -297,13 +294,10 @@ int main(int argc, char* argv[]) {
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
-                    printf("Unlocking %s...\n", filename);
                     // Si suppone che il file sia già stato aperto in scrittura dal client
-
                     if (unlockFile(filename) == -1) {
                         perror("Error: cannot unlock file");
                     }
-
                     filename = strtok_r(NULL, ",", &strtok_status);
                 }
                 break;
@@ -312,7 +306,6 @@ int main(int argc, char* argv[]) {
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
-                    printf("Deleting %s...\n", filename);
                     if (openFile(filename, O_LOCK) == -1) {
                         perror("Error: can't open the file, skip it");
                         // Non avendo aperto correttamente il file, evito di proseguire
