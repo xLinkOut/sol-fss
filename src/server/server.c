@@ -83,6 +83,7 @@ static void* signals_handler(void* sigset) {
         case SIGINT:
         case SIGQUIT:
             force_stop = 1;
+            log_event("INFO", "SIGINT or SIGQUIT received");
             printf("Info: SIGINT or SIGQUIT received\n");
             break;
 
@@ -95,6 +96,7 @@ static void* signals_handler(void* sigset) {
         */
         case SIGHUP:
             stop = 1;
+            log_event("INFO", "SIGHUP received");
             printf("Info: SIGHUP received\n");
             break;
 
