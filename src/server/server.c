@@ -23,6 +23,8 @@
 
 // File di log
 FILE* log_file = NULL;
+// Mutex file di log
+pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Logga su file un particolare evento, con un certo livello di importanza
 // 'level' si suppone essere uno tra INFO, DEBUG, WARN, ERROR
@@ -31,7 +33,15 @@ void log_event(const char* level, const char* message) {
     struct tm* tm_info = localtime(&timer);
     char date_time[20];
     strftime(date_time, sizeof(date_time), "%Y-%m-%d %H:%M:%S", tm_info);
+    if(pthread_mutex_lock(&log_mutex) != 0){
+        perror("Error: failed to lock log file");
+        // TODO: exit ?
+    }
     fprintf(log_file, "%s | %s\t| %s\n", date_time, level, message);
+    if(pthread_mutex_unlock(&log_mutex) != 0){
+        perror("Error: failed to unlock log file");
+        // TODO: exit ?
+    }
 }
 
 // TODO: spostare nel file di gestione dei segnali
