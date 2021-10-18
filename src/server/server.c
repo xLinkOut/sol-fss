@@ -666,7 +666,7 @@ int main(int argc, char* argv[]) {
     // ! LOG FILE
     // * Si è scelto di non sovrascrivere un eventuale file di log già esistente
     // Ogni sessione del server è racchiusa tra due righe di bootstrap/shutdown
-    if ((log_file = fopen(LOG_PATH, "a")) == NULL) {
+    if ((log_file = fopen(LOG_PATH, "w")) == NULL) {
         perror("Error: failed to open log file");
         return errno;
     }
