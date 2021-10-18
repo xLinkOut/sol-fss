@@ -18,7 +18,7 @@ int closeConnection(const char* sockname);
 int openFile(const char* pathname, int flags);
 
 // * Legge il contenuto del file <pathname> nel buffer <buf>
-int readFile(const char* pathname, void** buf, size_t* size);
+int readFile(const char* pathname, void** buf, size_t* size, const char* dirname);
 
 // * Scrive il file <pathname> sul server, e salva in <dirname> eventuali file espulsi
 int writeFile(const char* pathname, const char* dirname);

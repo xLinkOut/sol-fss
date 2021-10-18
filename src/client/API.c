@@ -16,6 +16,8 @@ int client_socket = -1;
 // Buffer per memorizzare i dati da inviare al server
 char message_buffer[MESSAGE_LENGTH];
 
+// TODO: verbose
+
 int openConnection(const char* sockname, int msec, const struct timespec abstime) {
     // Controllo la validità degli argomenti
     if (!sockname || msec < 0 || abstime.tv_sec < 0 || abstime.tv_nsec < 0) {
@@ -136,7 +138,7 @@ int openFile(const char* pathname, int flags){
     return -1;
 }
 
-int readFile(const char* pathname, void** buf, size_t* size){
+int readFile(const char* pathname, void** buf, size_t* size, const char* dirname){
     // Controllo la validità degli argomenti
     if(!pathname || !buf || !size){
         errno = EINVAL;
@@ -193,7 +195,38 @@ int readFile(const char* pathname, void** buf, size_t* size){
     if(readn((long)client_socket, *buf, *size) == -1){
         return -1;
     }
-    //printf("\t%s\n", (char*)*buf);
+
+    // Se <dirname> è stata specificata, salvo il file sul disco
+    if(dirname){
+        // Creo il path completo per il salvataggio del file
+        // Calcolo la lunghezza del path indicato da dirname
+        size_t dirname_length = strlen(dirname);
+        char abs_path[4096]; // => dirname/pathname, // TODO: MAX_PATH in linux/limits.h
+        memset(abs_path, 0, 4096);
+        
+        // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
+        //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
+        // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
+        int backslash = dirname[dirname_length-1] == '/' || pathname[0] == '/';
+        // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
+        snprintf(abs_path, 4096, backslash ? "%s%s" : "%s/%s", dirname, pathname);
+        printf("abs path %s\n", abs_path);
+
+        // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
+        //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
+        //  per poter contenere il file, in maniera ricorsiva. Un comportamento simile al comando 'mkdir -p <path>'
+        mkdir_p(abs_path);
+
+        // Salvo il contenuto del file sul disco
+        FILE* output_file = fopen(abs_path, "w");
+        if(!output_file) return -1;
+        if(fputs(*buf, output_file) == EOF){
+            fclose(output_file);
+            return -1;
+        }
+        if(fclose(output_file) == -1) return -1; 
+    }
+
      // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
     if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){

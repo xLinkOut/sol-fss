@@ -224,6 +224,9 @@ int main(int argc, char* argv[]) {
     // * Esecuzione delle richieste, in ordine FIFO
     char* filename = NULL;
     char* strtok_status = NULL;
+    // readFile
+    void* buffer = NULL;
+    size_t size = 0;
 
     while ((request = queue_pop(request_queue))) {
         printf("%c %s (%s, %lu)\n", request->command, request->arguments, request->dirname, request->time);
@@ -252,6 +255,30 @@ int main(int argc, char* argv[]) {
                 }
                 break;
             
+            case 'r': // Leggo dal server un(a lista di) file
+                // Possono essere specificati più file separati da virgola
+                filename = strtok_r(request->arguments, ",", &strtok_status);
+                while (filename) {
+                    printf("Sending %s...\n", filename);
+                    if (openFile(filename, 0) == -1) { // TODO: O_READ
+                        perror("Error: can't open the file, skip it");
+                        // Non avendo aperto correttamente il file, evito di proseguire
+                        filename = strtok_r(NULL, ",", &strtok_status);
+                        continue;
+                    }
+
+                    if (readFile(filename, &buffer, &size, request->dirname) == -1) {
+                        perror("Error: cannot read the file");
+                    }
+
+                    if (closeFile(filename) == -1) {
+                        perror("Error: something went wrong while closing the file");
+                    }
+
+                    filename = strtok_r(NULL, ",", &strtok_status);
+                }
+                break;
+
             case 'l': // Acquisisco la mutua esclusione su un(a lista di) file
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
