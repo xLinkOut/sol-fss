@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
     Request_t* request = NULL;  // Descrizione di una singola richiesta
 
     int option;  // Carattere del parametro appena letto da getopt
-    while ((option = getopt(argc, argv, ":hpf:w:W:D:r:R:d:t:l:")) != -1) {
+    while ((option = getopt(argc, argv, ":hpf:w:W:D:r:R:d:t:l:u:c:")) != -1) {
         switch (option) {
             // * Path del socket
             case 'f':
@@ -222,7 +222,7 @@ int main(int argc, char* argv[]) {
     if (VERBOSE) printf("Connection established correctly to '%s'\n", SOCKET_PATH);
 
     // * Esecuzione delle richieste, in ordine FIFO
-    char* token = NULL;
+    char* filename = NULL;
     char* strtok_status = NULL;
 
     while ((request = queue_pop(request_queue))) {
@@ -230,24 +230,75 @@ int main(int argc, char* argv[]) {
         switch (request->command) {
             case 'W':  // Invio al server un(a lista di) file
                 // Possono essere specificati più file separati da virgola
-                token = strtok_r(request->arguments, ",", &strtok_status);
-                while (token) {
-                    printf("Sending %s...\n", token);
-                    if (openFile(token, O_CREATE | O_LOCK) == -1) {
+                filename = strtok_r(request->arguments, ",", &strtok_status);
+                while (filename) {
+                    printf("Sending %s...\n", filename);
+                    if (openFile(filename, O_CREATE | O_LOCK) == -1) {
                         perror("Error: can't open the file, skip it");
                         // Non avendo aperto correttamente il file, evito di proseguire
+                        filename = strtok_r(NULL, ",", &strtok_status);
                         continue;
                     }
 
-                    if (writeFile(token, request->dirname) == -1) {
+                    if (writeFile(filename, request->dirname) == -1) {
                         perror("Error: cannot write the contents of the file");
                     }
 
-                    if (closeFile(token) == -1) {
+                    if (closeFile(filename) == -1) {
                         perror("Error: something went wrong while closing the file");
                     }
 
-                    token = strtok_r(NULL, ",", &strtok_status);
+                    filename = strtok_r(NULL, ",", &strtok_status);
+                }
+                break;
+            
+            case 'l': // Acquisisco la mutua esclusione su un(a lista di) file
+                // Possono essere specificati più file separati da virgola
+                filename = strtok_r(request->arguments, ",", &strtok_status);
+                while (filename) {
+                    printf("Locking %s...\n", filename);
+                    // Si suppone che il file sia già stato aperto in lettura dal client
+                    openFile(filename, 0);
+                    if (lockFile(filename) == -1) {
+                        perror("Error: cannot lock file");
+                    }
+
+                    filename = strtok_r(NULL, ",", &strtok_status);
+                }
+                break;
+
+            case 'u': // Rilascio la mutua esclusione su un(a lista di) file
+                // Possono essere specificati più file separati da virgola
+                filename = strtok_r(request->arguments, ",", &strtok_status);
+                while (filename) {
+                    printf("Unlocking %s...\n", filename);
+                    // Si suppone che il file sia già stato aperto in scrittura dal client
+
+                    if (unlockFile(filename) == -1) {
+                        perror("Error: cannot unlock file");
+                    }
+
+                    filename = strtok_r(NULL, ",", &strtok_status);
+                }
+                break;
+
+            case 'c': // Rimuovo dallo storage un(a lista di) file
+                // Possono essere specificati più file separati da virgola
+                filename = strtok_r(request->arguments, ",", &strtok_status);
+                while (filename) {
+                    printf("Deleting %s...\n", filename);
+                    if (openFile(filename, O_LOCK) == -1) {
+                        perror("Error: can't open the file, skip it");
+                        // Non avendo aperto correttamente il file, evito di proseguire
+                        filename = strtok_r(NULL, ",", &strtok_status);
+                        continue;
+                    }
+
+                    if (removeFile(filename) == -1) {
+                        perror("Error: cannot delete file from storage");
+                    }
+
+                    filename = strtok_r(NULL, ",", &strtok_status);
                 }
                 break;
         }
