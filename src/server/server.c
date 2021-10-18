@@ -16,6 +16,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <utils.h>
+#include <stdarg.h>
 
 // TODO: liberare la memoria prima di uscire in caso di errore
 // TODO: routine di cleanup per la chiusura su errore del server
@@ -28,16 +29,31 @@ pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Logga su file un particolare evento, con un certo livello di importanza
 // 'level' si suppone essere uno tra INFO, DEBUG, WARN, ERROR
-void log_event(const char* level, const char* message) {
+void log_event(const char* level, const char* message, ...) {
+    // Formatto la data e l'ora attuale
     time_t timer = time(NULL);
     struct tm* tm_info = localtime(&timer);
     char date_time[20];
     strftime(date_time, sizeof(date_time), "%Y-%m-%d %H:%M:%S", tm_info);
+    
+    // Costruisco il messaggio da scrivere nel file
+    char message_buffer[MESSAGE_LENGTH];
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    va_list args; // Inizializzo la lista di argomenti variabili
+    va_start(args, message); // Partendo dall'ultimo argomento conosciuto, cioè <message>
+    vsprintf(message_buffer, message, args); // Formatto la stringa come farebbe la funzione printf
+    va_end(args); // Chiudo la lista di argomenti
+
+    // Acquisisto l'accesso esclusivo sul file di log
     if(pthread_mutex_lock(&log_mutex) != 0){
         perror("Error: failed to lock log file");
         // TODO: exit ?
     }
-    fprintf(log_file, "%s | %s\t| %s\n", date_time, level, message);
+    
+    // Scrivo le informazioni sul file
+    fprintf(log_file, "%s | %s\t| %s\n", date_time, level, message_buffer);
+    
+    // Rilascio l'accesso esclusivo sul file di log
     if(pthread_mutex_unlock(&log_mutex) != 0){
         perror("Error: failed to unlock log file");
         // TODO: exit ?
@@ -672,7 +688,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Avvio del server
-    log_event("INFO", " == Server bootstrap == ");
+    log_event("INFO", "Server bootstrap");
 
     // ! STORAGE
     storage_t* storage = storage_create(STORAGE_MAX_FILES, STORAGE_MAX_CAPACITY, REPLACEMENT_POLICY);
@@ -857,7 +873,7 @@ int main(int argc, char* argv[]) {
                     // Aggiorno il contatore dei clients attivi
                     active_clients++;
                     //printf("Active clients: %d\n", active_clients);
-                    log_event("INFO", "Accepted incoming connection");
+                    log_event("INFO", "Accepted incoming connection from client %d", client_socket);
                     //printf("Info: accepted incoming connection on %d\n", client_socket);
 
                 } else if (fd == pipe_workers[0]) {
@@ -886,7 +902,7 @@ int main(int argc, char* argv[]) {
                     // Rimuovo il descrittore dal ready set
                     FD_CLR(fd, &set);
                     //if(fd == fd_num) fd_num--;
-                    log_event("INFO", "Nuovo task da x aggiunto in coda");
+                    //log_event("INFO", "Client %d has added a new task to the processing queue", fd);
                     //printf("Aggiunto %d nella queue\n", fd);
                 }
             }
@@ -935,7 +951,7 @@ int main(int argc, char* argv[]) {
     unlink(SOCKET_PATH);
     
     // Log di chiusura
-    log_event("INFO", " == Server shutdown == ");
+    log_event("INFO", "Server shutdown");
 
     // Chiudo il file di log
     if (fclose(log_file) != 0) {
