@@ -43,8 +43,7 @@ int main(int argc, char* argv[]) {
     // Nella optstring, il primo ':' serve a distinguere il caso di carattere sconosciuto, che ritorna '?',
     // dal caso di mancato argomento, che invece ritorna proprio ':'.
     // Il parametro -R, che prevede un argomento opzionale, verrà gestito nel caso ':'
-
-    bool VERBOSE = false;                   // Flag (p) modalità verbose
+    
     char* SOCKET_PATH = NULL;               // Percorso al socket file del server
     Queue_t* request_queue = queue_init();  // Coda delle richiesta
     if (!request_queue) {

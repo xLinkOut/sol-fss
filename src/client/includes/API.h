@@ -4,7 +4,10 @@
 #define _API_H_
 
 #include <time.h>
+#include <stdbool.h>
 
+// Modalità verbose
+bool VERBOSE;
 // Socket del client
 int client_socket;
 

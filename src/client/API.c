@@ -10,13 +10,14 @@
 #include <unistd.h>
 #include <constants.h>
 #include <sys/stat.h>
+#include <stdbool.h>
 
 // Imposto il socket con un valore negativo, e.g. 'non connesso'
 int client_socket = -1;
 // Buffer per memorizzare i dati da inviare al server
 char message_buffer[MESSAGE_LENGTH];
-
-// TODO: verbose
+// Modalità verbose
+bool VERBOSE = false;
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime) {
     // Controllo la validità degli argomenti
