@@ -263,3 +263,55 @@ bool llist_pop_last(linked_list_t* llist, char** key, void** data){
 
     return true;
 }
+
+bool llist_remove(linked_list_t* llist, const char* key){
+    // Controllo la validità degli argomenti
+    if(!llist || !key){
+        errno = EINVAL;
+        return false;
+    }
+
+    // Controllo che la lista non sia vuota
+    if(llist->length == 0){
+        errno = ENOENT;
+        return false;
+    }
+
+    // Parto dalla testa della lista
+    list_node_t* current_node = llist->first;
+
+    while(current_node){
+        // Se il nodo ha una chiave e questa è uguale a quella specificata
+        if(current_node->key && strcmp(current_node->key, key) == 0){
+            // Ho trovato il nodo, lo rimuovo dalla lista
+
+            // Se il nodo ha un predecessore
+            if(current_node->prev)
+                // lo faccio puntare al mio successore
+                current_node->prev->next = current_node->next;
+            else 
+                // altrimenti, vuol dire che è il nodo di testa della lista
+                llist->first = current_node->next;
+            
+            // Se il nodo ha un successore
+            if(current_node->next)
+                // lo faccio puntare al mio predecessore
+                current_node->next->prev = current_node->prev;
+            else
+                // altrimenti, vuol dire che è il nodo di coda della lista
+                llist->last = current_node->prev;
+            
+            // Cancello il nodo
+            llist_node_destroy(current_node);
+
+            // Decremento il contatore degli elementi presenti in lista
+            llist->length--;
+            
+            return true;
+        }
+        current_node = current_node->next;
+    }
+
+    // Non ho trovato il nodo cercato
+    return false;
+}

@@ -52,4 +52,7 @@ bool llist_push_last(linked_list_t* llist, const char* key, const void* data, si
 // * Rimuove la coda della lista e copia il contenuto del nodo in <data>
 bool llist_pop_last(linked_list_t* llist, char** key, void** data);
 
+// * Rimuove dalla lista il nodo corrispondente alla chiave <key>
+bool llist_remove(linked_list_t* llist, const char* key);
+
 #endif
