@@ -55,17 +55,21 @@ list_node_t* llist_node_create(const char* key, const void* data, size_t size) {
     return node;
 }
 
-void llist_node_destroy(list_node_t* node) {
+void llist_node_destroy(list_node_t* node, void (*free_node_data)(void*)) {
     // Controllo la validità degli argomenti
     if (!node) return;
     // Libero la memoria occupata dai dati del nodo
-    // TODO: Puntatore a funzione per liberare i dati del nodo
     if (node->key) free(node->key);
-    if (node->data) free(node->data);
+    if (node->data) {
+        if (free_node_data)
+            free_node_data(node->data);
+        else
+            free(node->data);
+    }
     free(node);
 }
 
-linked_list_t* llist_create() {
+linked_list_t* llist_create(void (*free_node_data)(void* data)) {
     // Alloco memoria per la lista
     linked_list_t* llist = malloc(sizeof(linked_list_t));
     if (!llist) return NULL;
@@ -74,6 +78,9 @@ linked_list_t* llist_create() {
     llist->first = NULL;
     llist->last = NULL;
     llist->length = 0;
+    // Se è stata specificata una funzione con cui liberare la memoria del campo <data>
+    //  dei nodi la salvo, altrimenti imposto la funzione di libreria free
+    llist->free_node_data = free_node_data ? free_node_data : free;
 
     // Ritorno un puntatore alla lista
     return llist;
@@ -87,10 +94,10 @@ void llist_destroy(linked_list_t* llist) {
     while (llist->first != NULL) {
         current = llist->first;
         llist->first = llist->first->next;
-        free(current);  // TODO: list node desroy
+        llist_node_destroy(current, llist->free_node_data);
     }
     // Cancello la testa della lista
-    if (llist->first) free(llist->first);
+    //if (llist->first) llist_node_destroy(llist->first, llist->free_node_data);
     // Cancello la lista
     free(llist);
 }
@@ -171,7 +178,7 @@ bool llist_pop_first(linked_list_t* llist, char** key, void** data) {
         llist->first->prev = NULL;  // Il predecessore della testa è ovviamente NULL
     }
     // Cancello il nodo
-    llist_node_destroy(node);
+    llist_node_destroy(node, llist->free_node_data);
     // Decremento il contatore degli elementi presenti in lista
     llist->length--;
 
@@ -254,7 +261,7 @@ bool llist_pop_last(linked_list_t* llist, char** key, void** data) {
         llist->last->next = NULL;  // Il successore della coda è ovviamente NULL
     }
     // Cancello il nodo
-    llist_node_destroy(node);
+    llist_node_destroy(node, llist->free_node_data);
     // Decremento il contatore degli elementi presenti in lista
     llist->length--;
 
@@ -299,7 +306,7 @@ bool llist_remove(linked_list_t* llist, const char* key) {
                 llist->last = current_node->prev;
 
             // Cancello il nodo
-            llist_node_destroy(current_node);
+            llist_node_destroy(current_node, llist->free_node_data);
 
             // Decremento il contatore degli elementi presenti in lista
             llist->length--;

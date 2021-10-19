@@ -26,9 +26,10 @@ typedef struct Node {
 
 // * Struttura dati della lista
 typedef struct LinkedList {
-    list_node_t* first;  // Testa della lista
-    list_node_t* last;   // Coda della lista
-    size_t length;       // Numero di elementi in lista
+    list_node_t* first;             // Testa della lista
+    list_node_t* last;              // Coda della lista
+    size_t length;                  // Numero di elementi in lista
+    void (*free_node_data)(void*);  // Funzione free per il campo data dei nodi
 } linked_list_t;
 
 // * Crea un nuovo nodo in memoria che conterrà <data>
@@ -36,11 +37,11 @@ typedef struct LinkedList {
 list_node_t* llist_node_create(const char* key, const void* data, size_t size);
 
 // * Cancella dalla memoria un nodo creato con llist_node_create
-void llist_node_destroy(list_node_t* node);
+void llist_node_destroy(list_node_t* node, void (*free_node_data)(void*));
 
-// * Crea una nuova lista vuota
+// * Crea una nuova lista vuota, impostando anche la funzione per cancellare il campo <data>
 // Ritorna un puntatore alla lista in caso di successo, NULL altrimenti, setta errno
-linked_list_t* llist_create();  // TODO: puntatore a funzione free nodi
+linked_list_t* llist_create(void (*free_node_data)(void*));
 
 // * Cancella dalla memoria una lista creata con llist_create, e tutti i suoi nodi
 void llist_destroy(linked_list_t* llist);
