@@ -62,6 +62,7 @@ linked_list_t* llist_create(){
     // Inizializzo i suoi dati
     llist->first = NULL;
     llist->last = NULL;
+    llist->length = 0;
 
     // Ritorno un puntatore alla lista
     return llist;
@@ -106,6 +107,9 @@ bool llist_push_first(linked_list_t* llist, const void* data, size_t size){
         llist->first = new_node; // Il nuovo nodo ora sarà la testa della lista
     }
 
+    // Incremento il contatore degli elementi presenti in lista
+    llist->length++;
+
     return true;
 }
 
@@ -117,7 +121,7 @@ bool llist_pop_first(linked_list_t* llist, void** data){
     }
 
     // Controllo che la lista non sia vuota
-    if(!llist->first){
+    if(llist->length == 0){
         errno = ENOENT;
         return false;
     }
@@ -147,6 +151,8 @@ bool llist_pop_first(linked_list_t* llist, void** data){
     }
     // Cancello il nodo
     llist_node_destroy(node);
+    // Decremento il contatore degli elementi presenti in lista
+    llist->length--;
 
     return true;
 }

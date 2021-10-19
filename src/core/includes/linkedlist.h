@@ -7,8 +7,8 @@
 #ifndef _LINKED_LIST_H_
 #define _LINKED_LIST_H_
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // * Struttura dati di un nodo della lista
 typedef struct Node {
@@ -20,8 +20,9 @@ typedef struct Node {
 
 // * Struttura dati della lista
 typedef struct LinkedList {
-    list_node_t* first;
-    list_node_t* last;
+    list_node_t* first;  // Testa della lista
+    list_node_t* last;   // Coda della lista
+    size_t length;       // Numero di elementi in lista
 } linked_list_t;
 
 // * Crea un nuovo nodo in memoria che conterrà <data>
