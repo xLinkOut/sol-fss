@@ -96,7 +96,7 @@ bool llist_push_first(linked_list_t* llist, const void* data, size_t size){
     if(!new_node) return false;
 
     // Se la lista è vuota
-    if(!llist->first){
+    if(llist->length == 0){
         // Aggiorno sia il puntatore alla testa che alla coda
         llist->first = new_node;
         llist->last = new_node;
@@ -169,7 +169,7 @@ bool llist_push_last(linked_list_t* llist, const void* data, size_t size){
     if(!new_node) return false;
 
     // Se la lista è vuota
-    if(!llist->first){
+    if(llist->length == 0){
         // Aggiorno sia il puntatore alla testa che alla coda
         llist->first = new_node;
         llist->last = new_node;
