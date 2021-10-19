@@ -48,3 +48,31 @@ void llist_node_destroy(list_node_t* node){
     if(node->data) free(node->data);
     free(node);
 }
+
+linked_list_t* llist_create(){
+    // Alloco memoria per la lista
+    linked_list_t* llist = malloc(sizeof(linked_list_t));
+    if(!llist) return NULL;
+
+    // Inizializzo i suoi dati
+    llist->first = llist->last = NULL;
+
+    // Ritorno un puntatore alla lista
+    return llist;
+}
+
+void llist_destroy(linked_list_t* llist){
+    // Controllo la validità degli argomenti
+    if(!llist) return;
+    // Scorro la lista per cancellare tutti i nodi
+    list_node_t* current = NULL;
+    while(llist->first != NULL){
+        current = llist->first;
+        llist->first = llist->first->next;
+        free(current);
+    }
+    // Cancello la testa della lista
+    if(llist->first) free(llist->first);
+    // Cancello la lista
+    free(llist);
+}

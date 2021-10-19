@@ -22,10 +22,18 @@ typedef struct LinkedList {
 } linked_list_t;
 
 // * Crea un nuovo nodo in memoria che conterrà <data>
-// Ritorna un puntatore al nodo in caso di successo, NULL altrimenti
+// Ritorna un puntatore al nodo in caso di successo, NULL altrimenti, setta errno
 list_node_t* llist_node_create(const void* data, size_t size);
 
 // * Cancella dalla memoria un nodo creato con llist_node_create
 void llist_node_destroy(list_node_t* node);
+
+// * Crea una nuova lista vuota
+// Ritorna un puntatore alla lista in caso di successo, NULL altrimenti, setta errno
+linked_list_t* llist_create(); // TODO: puntatore a funzione free nodi
+
+// * Cancella dalla memoria una lista creata con llist_create, e tutti i suoi nodi
+void llist_destroy(linked_list_t* llist);
+
 
 #endif
