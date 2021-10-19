@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 list_node_t* llist_node_create(const char* key, const void* data, size_t size){
     // Controllo la validità degli argomenti
@@ -343,4 +344,25 @@ bool llist_find(linked_list_t* llist, const char* key){
 
     // Non ho trovato il nodo cercato
     return false;
+}
+
+void llist_print(linked_list_t* llist){
+    // Controllo la validità degli argomenti
+    if(!llist) return;
+
+    // Controllo che la lista non sia vuota
+    if(llist->length == 0){
+        printf("->[-]\n");
+        return;
+    }
+
+    // Parto dalla testa della lista
+    list_node_t* current_node = llist->first;
+
+    while(current_node){
+        // Stampo le informazioni sul nodo
+        printf("->[%s, %p, %zd]\n",
+            current_node->key, current_node->data, current_node->data_size);
+        current_node = current_node->next;
+    }
 }

@@ -64,4 +64,7 @@ bool llist_remove(linked_list_t* llist, const char* key);
 // Ritorna true in caso di successo, false altrimenti, setta errno
 bool llist_find(linked_list_t* llist, const char* key);
 
+// * Visualizza a schermo i nodi presenti nella lista
+void llist_print(linked_list_t* llist);
+
 #endif
