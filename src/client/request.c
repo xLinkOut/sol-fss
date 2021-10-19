@@ -1,6 +1,6 @@
 // @author Luca Cirillo (545480)
 
-#include <request_queue.h>
+#include <request.h>
 #include <stdlib.h>
 
 request_t* request_create() {
