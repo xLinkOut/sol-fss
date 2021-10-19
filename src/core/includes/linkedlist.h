@@ -44,12 +44,12 @@ void llist_destroy(linked_list_t* llist);
 bool llist_push_first(linked_list_t* llist, const char* key, const void* data, size_t size);
 
 // * Rimuove la testa della lista e copia il contenuto del nodo in <data>
-bool llist_pop_first(linked_list_t* llist, void** data);
+bool llist_pop_first(linked_list_t* llist, char** key, void** data);
 
 // * Crea e aggiunge in coda un nuovo nodo contenente <data>
 bool llist_push_last(linked_list_t* llist, const char* key, const void* data, size_t size);
 
 // * Rimuove la coda della lista e copia il contenuto del nodo in <data>
-bool llist_pop_last(linked_list_t* llist, void** data);
+bool llist_pop_last(linked_list_t* llist, char** key, void** data);
 
 #endif

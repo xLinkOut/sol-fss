@@ -12,10 +12,11 @@
 
 list_node_t* llist_node_create(const char* key, const void* data, size_t size){
     // Controllo la validità degli argomenti
-    // Se sono stati specificati dei dati con dimensione pari a zero, oppure
-    //  nessun dato ma dimensione significativa, oppure
-    //  non è stata passata una chiave per il nodo, ritorno errore
-    if(!key || (data && size == 0) || (!data && size > 0)){
+    // Se non è stato passato alcun dato, oppure
+    //  sono stati specificati dei dati con dimensione pari a zero, oppure
+    //  non è stato specificato alcun dato ma una dimensione significativa,
+    //  ritorno errore
+    if((!key && !data && size == 0) || (data && size == 0) || (!data && size > 0)){
         errno = EINVAL;
         return NULL;
     }
@@ -24,11 +25,16 @@ list_node_t* llist_node_create(const char* key, const void* data, size_t size){
     list_node_t* node = malloc(sizeof(list_node_t));
     if(!node) return NULL;
 
-    // Copia la chiave del nodo
-    size_t key_size = strlen(key);
-    node->key = malloc(key_size + 1);
-    memset(node->key, 0, key_size);
-    strncpy(node->key, key, key_size);
+    // Se è stata specificata una chiave, la copio nel nodo
+    if(key){
+        size_t key_size = strlen(key);
+        node->key = malloc(key_size + 1);
+        memset(node->key, 0, key_size + 1);
+        strncpy(node->key, key, key_size);
+    }else{
+        // Altrimenti, imposto il puntatore node->key su NULL
+        node->key = NULL;
+    }
 
     // Se è stato specificato un contenuto da memorizzare
     if(data && size > 0){
@@ -39,7 +45,7 @@ list_node_t* llist_node_create(const char* key, const void* data, size_t size){
         // Riporto nel nodo la dimensione
         node->data_size = size;
     }else{
-        // Altrimenti, inizializzo il puntatore a data
+        // Altrimenti, imposto il puntatore node->data su NULL
         node->data = NULL;
         node->data_size = 0;
     }
@@ -57,7 +63,7 @@ void llist_node_destroy(list_node_t* node){
     if(!node) return;
     // Libero la memoria occupata dai dati del nodo
     // TODO: Puntatore a funzione per liberare i dati del nodo
-    free(node->key);
+    if(node->key) free(node->key);
     if(node->data) free(node->data);
     free(node);
 }
@@ -84,7 +90,7 @@ void llist_destroy(linked_list_t* llist){
     while(llist->first != NULL){
         current = llist->first;
         llist->first = llist->first->next;
-        free(current);
+        free(current); // TODO: list node desroy
     }
     // Cancello la testa della lista
     if(llist->first) free(llist->first);
@@ -121,9 +127,9 @@ bool llist_push_first(linked_list_t* llist, const char* key, const void* data, s
     return true;
 }
 
-bool llist_pop_first(linked_list_t* llist, void** data){
+bool llist_pop_first(linked_list_t* llist, char** key, void** data){
     // Controllo la validità degli argomenti
-    if(!llist || !data){
+    if(!llist){
         errno = EINVAL;
         return false;
     }
@@ -136,15 +142,25 @@ bool llist_pop_first(linked_list_t* llist, void** data){
 
     // Tengo un riferimento al nodo da rimuovere
     list_node_t* node = llist->first;
-    // Se il nodo non è vuoto
-    if(node->data && node->data_size > 0){
-        // Alloco la memoria per copiare i dati
-        *data = malloc(node->data_size);
-        // Copio i dati nel puntatore <data>
-        memcpy(*data, node->data, node->data_size);
-    }else{
-        // Altrimenti imposto su NULL
-        *data = NULL;
+    
+    // Se <key> è specificato, copio la chiave del nodo
+    if(key){
+        *key = malloc(strlen(node->key));
+        strncpy(*key, node->key, strlen(node->key)); 
+    }
+
+    // Se <data> è specificato, copio il contenuto del nodo
+    if(data){
+        // Se il nodo non è vuoto
+        if(node->data && node->data_size > 0){
+            // Alloco la memoria per copiare i dati
+            *data = malloc(node->data_size);
+            // Copio i dati nel puntatore <data>
+            memcpy(*data, node->data, node->data_size);
+        }else{
+            // Altrimenti imposto su NULL
+            *data = NULL;
+        }
     }
 
     // Aggiorno la lista, rimuovendo il nodo di testa
@@ -194,9 +210,9 @@ bool llist_push_last(linked_list_t* llist, const char* key, const void* data, si
     return true;
 }
 
-bool llist_pop_last(linked_list_t* llist, void** data){
+bool llist_pop_last(linked_list_t* llist, char** key, void** data){
     // Controllo la validità degli argomenti
-    if(!llist || !data){
+    if(!llist){
         errno = EINVAL;
         return false;
     }
@@ -209,15 +225,25 @@ bool llist_pop_last(linked_list_t* llist, void** data){
 
     // Tengo un riferimento al nodo da rimuovere
     list_node_t* node = llist->last;
-    // Se il nodo non è vuoto
-    if(node->data && node->data_size > 0){
-        // Alloco la memoria per copiare i dati
-        *data = malloc(node->data_size);
-        // Copio i dati nel puntatore <data>
-        memcpy(*data, node->data, node->data_size);
-    }else{
-        // Altrimenti imposto su NULL
-        *data = NULL;
+
+    // Se <key> è specificato, copio la chiave del nodo
+    if(key){
+        *key = malloc(strlen(node->key));
+        strncpy(*key, node->key, strlen(node->key));    
+    }
+    
+    // Se <data> è specificato, copio il contenuto del nodo
+    if(data){
+        // Se il nodo non è vuoto
+        if(node->data && node->data_size > 0){
+            // Alloco la memoria per copiare i dati
+            *data = malloc(node->data_size);
+            // Copio i dati nel puntatore <data>
+            memcpy(*data, node->data, node->data_size);
+        }else{
+            // Altrimenti imposto su NULL
+            *data = NULL;
+        }
     }
 
     // Aggiorno la lista, rimuovendo il nodo di testa
