@@ -157,3 +157,75 @@ bool llist_pop_first(linked_list_t* llist, void** data){
     return true;
 }
 
+bool llist_push_last(linked_list_t* llist, const void* data, size_t size){
+    // Controllo la validità degli argomenti
+    if(!llist){
+        errno = EINVAL;
+        return false;
+    }
+
+    // Creo il nuovo nodo 
+    list_node_t* new_node = llist_node_create(data, size);
+    if(!new_node) return false;
+
+    // Se la lista è vuota
+    if(!llist->first){
+        // Aggiorno sia il puntatore alla testa che alla coda
+        llist->first = new_node;
+        llist->last = new_node;
+    }else{
+        // Altrimenti, aggiungo in coda
+        llist->last->next = new_node; // Il successore dell'attuale nodo in coda sarà il nuovo nodo
+        new_node->prev = llist->last; // Il predecessore del nuovo nodo sarà l'attuale nodo in coda 
+        llist->last = new_node;  // Il nuovo nodo ora sarà la coda della lista
+    }
+
+    // Incremento il contatore degli elementi presenti in lista
+    llist->length++;
+
+    return true;
+}
+
+bool llist_pop_last(linked_list_t* llist, void** data){
+    // Controllo la validità degli argomenti
+    if(!llist || !data){
+        errno = EINVAL;
+        return false;
+    }
+
+    // Controllo che la lista non sia vuota
+    if(llist->length == 0){
+        errno = ENOENT;
+        return false;
+    }
+
+    // Tengo un riferimento al nodo da rimuovere
+    list_node_t* node = llist->last;
+    // Se il nodo non è vuoto
+    if(node->data && node->data_size > 0){
+        // Alloco la memoria per copiare i dati
+        *data = malloc(node->data_size);
+        // Copio i dati nel puntatore <data>
+        memcpy(*data, node->data, node->data_size);
+    }else{
+        // Altrimenti imposto su NULL
+        *data = NULL;
+    }
+
+    // Aggiorno la lista, rimuovendo il nodo di testa
+    // Se la lista contiene solo il nodo corrente
+    if(!node->prev){
+        llist->first = NULL;
+        llist->last = NULL;
+    }else{
+        // Altrimenti, aggiorno la coda della lista
+        llist->last = node->prev; // La nuova coda sarà il predecessore del nodo appena rimosso
+        llist->last->next = NULL; // Il successore della coda è ovviamente NULL
+    }
+    // Cancello il nodo
+    llist_node_destroy(node);
+    // Decremento il contatore degli elementi presenti in lista
+    llist->length--;
+
+    return true;
+}
