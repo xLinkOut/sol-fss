@@ -315,3 +315,32 @@ bool llist_remove(linked_list_t* llist, const char* key){
     // Non ho trovato il nodo cercato
     return false;
 }
+
+bool llist_find(linked_list_t* llist, const char* key){
+    // Controllo la validità degli argomenti
+    if(!llist || !key){
+        errno = EINVAL;
+        return false;
+    }
+
+    // Controllo che la lista non sia vuota
+    if(llist->length == 0){
+        errno = ENOENT;
+        return false;
+    }
+
+    // Parto dalla testa della lista
+    list_node_t* current_node = llist->first;
+
+    while(current_node){
+        // Se il nodo ha una chiave e questa è uguale a quella specificata
+        if(current_node->key && strcmp(current_node->key, key) == 0){
+            // Ho trovato il nodo cercato
+            return true;
+        }
+        current_node = current_node->next;
+    }
+
+    // Non ho trovato il nodo cercato
+    return false;
+}

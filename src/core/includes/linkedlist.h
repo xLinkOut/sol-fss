@@ -41,18 +41,27 @@ linked_list_t* llist_create(); // TODO: puntatore a funzione free nodi
 void llist_destroy(linked_list_t* llist);
 
 // * Crea e aggiunge in testa un nuovo nodo contenente <data>
+// Ritorna true in caso di successo, false altrimenti, setta errno
 bool llist_push_first(linked_list_t* llist, const char* key, const void* data, size_t size);
 
 // * Rimuove la testa della lista e copia il contenuto del nodo in <data>
+// Ritorna true in caso di successo, false altrimenti, setta errno
 bool llist_pop_first(linked_list_t* llist, char** key, void** data);
 
 // * Crea e aggiunge in coda un nuovo nodo contenente <data>
+// Ritorna true in caso di successo, false altrimenti, setta errno
 bool llist_push_last(linked_list_t* llist, const char* key, const void* data, size_t size);
 
 // * Rimuove la coda della lista e copia il contenuto del nodo in <data>
+// Ritorna true in caso di successo, false altrimenti, setta errno
 bool llist_pop_last(linked_list_t* llist, char** key, void** data);
 
 // * Rimuove dalla lista il nodo corrispondente alla chiave <key>
+// Ritorna true in caso di successo, false altrimenti, setta errno
 bool llist_remove(linked_list_t* llist, const char* key);
+
+// * Cerca nella lista il nodo corrispondente alla chiave <key>
+// Ritorna true in caso di successo, false altrimenti, setta errno
+bool llist_find(linked_list_t* llist, const char* key);
 
 #endif
