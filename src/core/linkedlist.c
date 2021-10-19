@@ -1,134 +1,50 @@
 // @author Luca Cirillo (545480)
 
-// * Linked List, con inserimento in coda e rimozione partendo dalla testa
+// * Generic Linked List, supporta qualsiasi tipologia di dato all'interno dei nodi,
+// *  l'inserimento avviene in coda e la rimozione scorre la lista partendo dalla testa.
+// *  Inoltre, le funzioni di push e pop permettono l'utilizzo della lista come una queue con politica FIFO
 
-#include <errno.h>
 #include <linkedlist.h>
-#include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 
-linked_list_t* linked_list_create() {
-    linked_list_t* llist = malloc(sizeof(linked_list_t));
-    if (!llist) return NULL;
-    llist->first = llist->last = NULL;
-    llist->size = 0;
-    return llist;
-}
-
-void linked_list_destroy(linked_list_t* llist) {
+list_node_t* llist_node_create(const void* data, size_t size){
     // Controllo la validità degli argomenti
-    if (!llist) {
+    // Se sono stati specificati dei dati con dimensione pari a zero,
+    //  oppure nessun dato ma dimensione significativa, ritorno errore
+    if((data && size == 0) || (!data && size > 0)){
         errno = EINVAL;
-        return;
+        return NULL;
     }
-    // Scorro la lista per cancellare tutti i nodi
-    while (llist->first != llist->last) {
-        list_node_t* node = llist->first;
-        llist->first = llist->first->next;
-        free(node);
+
+    // Alloco memoria per il nuovo nodo
+    list_node_t* node = malloc(sizeof(list_node_t));
+    if(!node) return NULL;
+
+    // Se è stato specificato un contenuto da memorizzare
+    if(data && size > 0){
+        // Alloco la memoria necessaria
+        node->data = malloc(size);
+        // Copio i dati nel nodo
+        memcpy(node->data, data, size);
+    }else{
+        // Altrimenti, inizializzo il puntatore a data
+        node->data = NULL;
     }
-    // Cancello la testa della lista
-    if (llist->first) free(llist->first);
-    // Cancello la lista
-    free(llist);
+
+    // Inizializzo il puntatore al nodo successivo
+    node->next = NULL;
+
+    // Quindi, ritorno un puntatore al nodo
+    return node;
 }
 
-bool linked_list_insert(linked_list_t* llist, int data) {
+void llist_node_destroy(list_node_t* node){
     // Controllo la validità degli argomenti
-    if (!llist) {
-        errno = EINVAL;
-        return false;
-    }
-    // Creo un nuovo nodo
-    list_node_t* new_node = malloc(sizeof(list_node_t));
-    if (!new_node) return false;
-    new_node->data = data;
-    new_node->next = NULL;
-
-    if (!llist->first) {
-        // La lista è vuota, aggiorno testa e coda
-        llist->first = new_node;
-        llist->last = new_node;
-    } else {
-        // Inserisco in coda
-        (llist->last)->next = new_node;
-        llist->last = new_node;
-    }
-
-    llist->size++;
-    return true;
-}
-
-bool linked_list_remove(linked_list_t* llist, int data) {
-    // Controllo la validità degli argomenti
-    if (!llist || !data) {
-        errno = EINVAL;
-        return false;
-    }
-
-    // Controllo che la lista non sia vuota
-    if (!llist->first) {
-        errno = ENOENT;
-        return -1;
-    }
-
-    // Se il nodo cercato è la testa della lista
-    if (llist->first->data == data) {
-        list_node_t* head = llist->first;
-        llist->first = llist->first->next;
-        free(head);
-        // Se ho rimosso l'unico nodo della lista, aggiorno anche la coda
-        if (llist->first == NULL) llist->last = NULL;
-        return true;
-    }
-
-    // Scorro la lista partendo dalla testa per trovare il nodo che contiene <data>
-    list_node_t* last_node = NULL;
-    list_node_t* current_node = llist->first->next;
-
-    while (current_node) {
-        if (current_node->data == data) {
-            // Rimuovo il nodo
-            // Aggancio il nodo precedente a quello successivo, rispetto al nodo corrente
-            if (last_node) last_node->next = current_node->next;
-            if (last_node->next == NULL) llist->last = last_node;
-            free(current_node);
-            llist->size--;
-            return true;
-        }
-        last_node = current_node;
-        current_node = current_node->next;
-    }
-
-    // Se nessun nodo corrisponde, alla fine ritorno false
-    return false;
-}
-
-bool linked_list_find(linked_list_t* llist, int data) {
-    // Controllo la validità degli argomenti e che la lista non sia vuota
-    if (!llist || !llist->first) return false;
-    list_node_t* current_node = llist->first;
-    // Scorro tutti gli elementi della lista
-    while (current_node) {
-        // Appena trovo un nodo con l'elemento da cercare, ritorno true
-        if (current_node->data == data)
-            return true;
-        current_node = current_node->next;
-    }
-    // Se non lo trovo, alla fine ritorno false
-    return false;
-}
-
-void linked_list_print(linked_list_t* llist) {
-    if (!llist) return;
-    if (!llist->first) {
-        printf("[-]\n");
-        return;
-    }
-    list_node_t* node = (list_node_t*)llist->first;
-    printf("[%d]", node->data);
-    while ((node = node->next)) {
-        printf("->[%d]", node->data);
-    }
-    printf("\n");
+    if(!node) return;
+    // Libero la memoria occupata dai dati del nodo
+    // TODO: Puntatore a funzione per liberare i dati del nodo
+    if(node->data) free(node->data);
+    free(node);
 }

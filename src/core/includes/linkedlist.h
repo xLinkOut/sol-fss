@@ -1,41 +1,31 @@
 // @author Luca Cirillo (545480)
 
-// * Linked List, con inserimento in coda e rimozione partendo dalla testa
+// * Generic Linked List, supporta qualsiasi tipologia di dato all'interno dei nodi,
+// *  l'inserimento avviene in coda e la rimozione scorre la lista partendo dalla testa.
+// *  Inoltre, le funzioni di push e pop permettono l'utilizzo della lista come una queue con politica FIFO
 
-#include <stdbool.h>
+#ifndef _LINKED_LIST_H_
+#define _LINKED_LIST_H_
+
 #include <stddef.h>
 
 // * Struttura dati di un nodo della lista
-typedef struct ListNode {
-    int data;
-    struct ListNode* next;  // Puntatore al nodo successivo
+typedef struct Node {
+    void* data;
+    struct Node* next;
 } list_node_t;
 
 // * Struttura dati della lista
 typedef struct LinkedList {
-    list_node_t* first;  // Testa della lista
-    list_node_t* last;   // Coda della lista
-    size_t size;         // Numero di elementi nella lista
+    list_node_t* first;
+    list_node_t* last;
 } linked_list_t;
 
-// * Crea una nuova lista vuota
-// Ritorna un puntatore alla lista in caso di successo, NULL in caso di fallimento, setta errno
-linked_list_t* linked_list_create();
+// * Crea un nuovo nodo in memoria che conterrà <data>
+// Ritorna un puntatore al nodo in caso di successo, NULL altrimenti
+list_node_t* llist_node_create(const void* data, size_t size);
 
-// * Cancella una lista creata con linked_list_create
-void linked_list_destroy(linked_list_t* llist);
+// * Cancella dalla memoria un nodo creato con llist_node_create
+void llist_node_destroy(list_node_t* node);
 
-// * Inserisce un nuovo nodo in coda alla lista, che conterrà <data>
-// Ritorna true in caso di successo, false in caso di fallimento, setta errno
-bool linked_list_insert(linked_list_t* llist, int data);
-
-// * Rimuove il nodo contenente <data> dalla lista, partendo dalla testa
-// Ritorna true in caso di successo, false in caso di fallimento, setta errno
-bool linked_list_remove(linked_list_t* llist, int data);
-
-// * Cerca il nodo contenente <data> nella lista, partendo dalla testa
-// Ritorna true in caso di successo, false in caso di fallimento, setta errno
-bool linked_list_find(linked_list_t* llist, int data);
-
-// * Visualizza la lista a schermo
-void linked_list_print(linked_list_t* llist);
+#endif
