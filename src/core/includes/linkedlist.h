@@ -14,6 +14,7 @@
 typedef struct Node {
     void* data;
     size_t data_size;
+    struct Node* prev;
     struct Node* next;
 } list_node_t;
 

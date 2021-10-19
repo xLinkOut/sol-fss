@@ -37,7 +37,8 @@ list_node_t* llist_node_create(const void* data, size_t size){
         node->data_size = 0;
     }
 
-    // Inizializzo il puntatore al nodo successivo
+    // Inizializzo i puntatori ai nodi precedente e successivo
+    node->prev = NULL;
     node->next = NULL;
 
     // Quindi, ritorno un puntatore al nodo
@@ -59,7 +60,8 @@ linked_list_t* llist_create(){
     if(!llist) return NULL;
 
     // Inizializzo i suoi dati
-    llist->first = llist->last = NULL;
+    llist->first = NULL;
+    llist->last = NULL;
 
     // Ritorno un puntatore alla lista
     return llist;
@@ -99,8 +101,9 @@ bool llist_push_first(linked_list_t* llist, const void* data, size_t size){
         llist->last = new_node;
     }else{
         // Altrimenti, aggiunto in testa
-        new_node->next = llist->first;
-        llist->first = new_node;
+        new_node->next = llist->first; // Il successore del nuovo nodo sarà l'attuale nodo in testa
+        llist->first->prev = new_node; // Il predecessore dell'attuale nodo di testa sarà il nuovo nodo
+        llist->first = new_node; // Il nuovo nodo ora sarà la testa della lista
     }
 
     return true;
@@ -139,7 +142,8 @@ bool llist_pop_first(linked_list_t* llist, void** data){
         llist->last = NULL;
     }else{
         // Altrimenti, porto in testa il suo successore
-        llist->first = node->next;
+        llist->first = node->next; // La nuova testa sarà il successore del nodo appena rimosso
+        llist->first->prev = NULL; // Il predecessore della testa è ovviamente NULL
     }
     // Cancello il nodo
     llist_node_destroy(node);
