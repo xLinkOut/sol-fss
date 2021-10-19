@@ -1,8 +1,13 @@
 // @author Luca Cirillo (545480)
 
-// * Generic Linked List, supporta qualsiasi tipologia di dato all'interno dei nodi,
-// *  l'inserimento avviene in coda e la rimozione scorre la lista partendo dalla testa.
-// *  Inoltre, le funzioni di push e pop permettono l'utilizzo della lista come una queue con politica FIFO
+// * Generic Linked List:
+// *  Supporta qualsiasi tipologia di dato all'interno dei nodi, che vengono identificati da una chiave.
+// *  Almeno un elemento tra chiave e dato deve essere specificato, meglio se entrambi; nulla toglie
+// *   che la chiave possa essere utilizzata per memorizzare dati significativi per l'utente
+// *  L'inserimento e la rimozione dei nodi può essere fatto in testa oppure in coda;
+// *   in particolare è possibile rimuovere uno specifico nodo tramite la sua chiave.
+// *  Per utilizzare la lista come una coda con politica FIFO, si possono sfruttare i metodi
+// *   llist_push_last, che aggiunge in coda, e llist_pop_first, che rimuove dalla testa.
 
 #ifndef _LINKED_LIST_H_
 #define _LINKED_LIST_H_
@@ -12,11 +17,11 @@
 
 // * Struttura dati di un nodo della lista
 typedef struct Node {
-    char* key;
-    void* data;
-    size_t data_size;
-    struct Node* prev;
-    struct Node* next;
+    char* key;          // Chiave identificativa del nodo
+    void* data;         // Dati contenuti nel nodo
+    size_t data_size;   // Dimensione dei dati contenuti nel nodo
+    struct Node* prev;  // Puntatore al nodo precedente
+    struct Node* next;  // Puntatore al nodo successivo
 } list_node_t;
 
 // * Struttura dati della lista
@@ -35,7 +40,7 @@ void llist_node_destroy(list_node_t* node);
 
 // * Crea una nuova lista vuota
 // Ritorna un puntatore alla lista in caso di successo, NULL altrimenti, setta errno
-linked_list_t* llist_create(); // TODO: puntatore a funzione free nodi
+linked_list_t* llist_create();  // TODO: puntatore a funzione free nodi
 
 // * Cancella dalla memoria una lista creata con llist_create, e tutti i suoi nodi
 void llist_destroy(linked_list_t* llist);
