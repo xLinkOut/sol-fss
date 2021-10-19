@@ -10,11 +10,12 @@
 #include <string.h>
 #include <stdbool.h>
 
-list_node_t* llist_node_create(const void* data, size_t size){
+list_node_t* llist_node_create(const char* key, const void* data, size_t size){
     // Controllo la validità degli argomenti
-    // Se sono stati specificati dei dati con dimensione pari a zero,
-    //  oppure nessun dato ma dimensione significativa, ritorno errore
-    if((data && size == 0) || (!data && size > 0)){
+    // Se sono stati specificati dei dati con dimensione pari a zero, oppure
+    //  nessun dato ma dimensione significativa, oppure
+    //  non è stata passata una chiave per il nodo, ritorno errore
+    if(!key || (data && size == 0) || (!data && size > 0)){
         errno = EINVAL;
         return NULL;
     }
@@ -22,6 +23,12 @@ list_node_t* llist_node_create(const void* data, size_t size){
     // Alloco memoria per il nuovo nodo
     list_node_t* node = malloc(sizeof(list_node_t));
     if(!node) return NULL;
+
+    // Copia la chiave del nodo
+    size_t key_size = strlen(key);
+    node->key = malloc(key_size + 1);
+    memset(node->key, 0, key_size);
+    strncpy(node->key, key, key_size);
 
     // Se è stato specificato un contenuto da memorizzare
     if(data && size > 0){
@@ -50,6 +57,7 @@ void llist_node_destroy(list_node_t* node){
     if(!node) return;
     // Libero la memoria occupata dai dati del nodo
     // TODO: Puntatore a funzione per liberare i dati del nodo
+    free(node->key);
     if(node->data) free(node->data);
     free(node);
 }
@@ -84,7 +92,7 @@ void llist_destroy(linked_list_t* llist){
     free(llist);
 }
 
-bool llist_push_first(linked_list_t* llist, const void* data, size_t size){
+bool llist_push_first(linked_list_t* llist, const char* key, const void* data, size_t size){
     // Controllo la validità degli argomenti
     if(!llist){
         errno = EINVAL;
@@ -92,7 +100,7 @@ bool llist_push_first(linked_list_t* llist, const void* data, size_t size){
     }
 
     // Creo il nuovo nodo 
-    list_node_t* new_node = llist_node_create(data, size);
+    list_node_t* new_node = llist_node_create(key, data, size);
     if(!new_node) return false;
 
     // Se la lista è vuota
@@ -157,7 +165,7 @@ bool llist_pop_first(linked_list_t* llist, void** data){
     return true;
 }
 
-bool llist_push_last(linked_list_t* llist, const void* data, size_t size){
+bool llist_push_last(linked_list_t* llist, const char* key, const void* data, size_t size){
     // Controllo la validità degli argomenti
     if(!llist){
         errno = EINVAL;
@@ -165,7 +173,7 @@ bool llist_push_last(linked_list_t* llist, const void* data, size_t size){
     }
 
     // Creo il nuovo nodo 
-    list_node_t* new_node = llist_node_create(data, size);
+    list_node_t* new_node = llist_node_create(key, data, size);
     if(!new_node) return false;
 
     // Se la lista è vuota

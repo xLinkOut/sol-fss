@@ -12,6 +12,7 @@
 
 // * Struttura dati di un nodo della lista
 typedef struct Node {
+    char* key;
     void* data;
     size_t data_size;
     struct Node* prev;
@@ -27,7 +28,7 @@ typedef struct LinkedList {
 
 // * Crea un nuovo nodo in memoria che conterrà <data>
 // Ritorna un puntatore al nodo in caso di successo, NULL altrimenti, setta errno
-list_node_t* llist_node_create(const void* data, size_t size);
+list_node_t* llist_node_create(const char* key, const void* data, size_t size);
 
 // * Cancella dalla memoria un nodo creato con llist_node_create
 void llist_node_destroy(list_node_t* node);
@@ -40,13 +41,13 @@ linked_list_t* llist_create(); // TODO: puntatore a funzione free nodi
 void llist_destroy(linked_list_t* llist);
 
 // * Crea e aggiunge in testa un nuovo nodo contenente <data>
-bool llist_push_first(linked_list_t* llist, const void* data, size_t size);
+bool llist_push_first(linked_list_t* llist, const char* key, const void* data, size_t size);
 
 // * Rimuove la testa della lista e copia il contenuto del nodo in <data>
 bool llist_pop_first(linked_list_t* llist, void** data);
 
 // * Crea e aggiunge in coda un nuovo nodo contenente <data>
-bool llist_push_last(linked_list_t* llist, const void* data, size_t size);
+bool llist_push_last(linked_list_t* llist, const char* key, const void* data, size_t size);
 
 // * Rimuove la coda della lista e copia il contenuto del nodo in <data>
 bool llist_pop_last(linked_list_t* llist, void** data);
