@@ -11,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 #include <utils.h>
+#include <linkedlist.h>
 
 // TODO: Liberare eventuale memoria prima di uscire, anche nel caso di -h
 
@@ -44,13 +45,14 @@ int main(int argc, char* argv[]) {
     // dal caso di mancato argomento, che invece ritorna proprio ':'.
     // Il parametro -R, che prevede un argomento opzionale, verrà gestito nel caso ':'
     
-    char* SOCKET_PATH = NULL;               // Percorso al socket file del server
-    Queue_t* request_queue = queue_init();  // Coda delle richiesta
+    char* SOCKET_PATH = NULL; // Percorso al socket file del server
+    
+    linked_list_t* request_queue = llist_create(request_destroy);  // Coda delle richiesta
     if (!request_queue) {
         fprintf(stderr, "Error: failed to create request queue\n");
         return errno;
     }
-    Request_t* request = NULL;  // Descrizione di una singola richiesta
+    request_t* request = NULL;  // Descrizione di una singola richiesta
 
     int option;  // Carattere del parametro appena letto da getopt
     while ((option = getopt(argc, argv, ":hpf:w:W:D:r:R:d:t:l:u:c:")) != -1) {
@@ -83,9 +85,9 @@ int main(int argc, char* argv[]) {
             case 'u':
             case 'c':
                 // Controllo se è presente una richiesta in attesa di essere messa in coda
-                if (request) queue_push(request_queue, request);
+                if (request) llist_push_last(request_queue, NULL, request, sizeof(request));
                 // Creo una nuova richiesta
-                if (!(request = queue_new_request())) {
+                if (!(request = request_create())) {
                     fprintf(stderr, "Error: failed to allocate memory for a new request");
                     return errno;
                 }
@@ -175,9 +177,9 @@ int main(int argc, char* argv[]) {
                     case 'R':      // E' proprio R, devo impostare n = 0
                         // Eseguo le operazioni relative al comando R, ma imposto come argomento di default 'n=0'
                         // Controllo se è presente una richiesta in attesa di essere messa in coda
-                        if (request) queue_push(request_queue, request);
+                        if (request) llist_push_last(request_queue, NULL, request, sizeof(request));
                         // Creo una nuova richiesta
-                        if (!(request = queue_new_request())) {
+                        if (!(request = request_create())) {
                             fprintf(stderr, "Error: failed to allocate memory for a new request");
                             return errno;
                         }
@@ -204,9 +206,9 @@ int main(int argc, char* argv[]) {
     }
 
     // Metto in coda l'eventuale ultima (o unica) richiesta
-    if (request) queue_push(request_queue, request);
+    if (request) llist_push_last(request_queue, NULL, request, sizeof(request));
 
-    queue_print(request_queue);  // ! Debug
+    llist_print(request_queue);  // ! Debug
 
     // * Apertura della connessione con il server
     // Tempo di attesa tra un tentativo di connessione e l'altro (1 secondo)
@@ -227,7 +229,7 @@ int main(int argc, char* argv[]) {
     void* buffer = NULL;
     size_t size = 0;
 
-    while ((request = queue_pop(request_queue))) {
+    while (llist_pop_first(request_queue, NULL, (void*) &request)) {
         printf("%c %s (%s, %lu)\n", request->command, request->arguments, request->dirname, request->time);
         switch (request->command) {
             case 'W':  // Invio al server un(a lista di) file
