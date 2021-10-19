@@ -8,10 +8,12 @@
 #define _LINKED_LIST_H_
 
 #include <stddef.h>
+#include <stdbool.h>
 
 // * Struttura dati di un nodo della lista
 typedef struct Node {
     void* data;
+    size_t data_size;
     struct Node* next;
 } list_node_t;
 
@@ -35,5 +37,10 @@ linked_list_t* llist_create(); // TODO: puntatore a funzione free nodi
 // * Cancella dalla memoria una lista creata con llist_create, e tutti i suoi nodi
 void llist_destroy(linked_list_t* llist);
 
+// * Crea e aggiunge in testa un nuovo nodo contenente <data>
+bool llist_push_first(linked_list_t* llist, const void* data, size_t size);
+
+// * Rimuove la testa della lista e copia il contenuto del nodo in <data>
+bool llist_pop_first(linked_list_t* llist, void** data);
 
 #endif

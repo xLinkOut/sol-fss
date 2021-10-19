@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 list_node_t* llist_node_create(const void* data, size_t size){
     // Controllo la validità degli argomenti
@@ -28,9 +29,12 @@ list_node_t* llist_node_create(const void* data, size_t size){
         node->data = malloc(size);
         // Copio i dati nel nodo
         memcpy(node->data, data, size);
+        // Riporto nel nodo la dimensione
+        node->data_size = size;
     }else{
         // Altrimenti, inizializzo il puntatore a data
         node->data = NULL;
+        node->data_size = 0;
     }
 
     // Inizializzo il puntatore al nodo successivo
@@ -76,3 +80,70 @@ void llist_destroy(linked_list_t* llist){
     // Cancello la lista
     free(llist);
 }
+
+bool llist_push_first(linked_list_t* llist, const void* data, size_t size){
+    // Controllo la validità degli argomenti
+    if(!llist){
+        errno = EINVAL;
+        return false;
+    }
+
+    // Creo il nuovo nodo 
+    list_node_t* new_node = llist_node_create(data, size);
+    if(!new_node) return false;
+
+    // Se la lista è vuota
+    if(!llist->first){
+        // Aggiorno sia il puntatore alla testa che alla coda
+        llist->first = new_node;
+        llist->last = new_node;
+    }else{
+        // Altrimenti, aggiunto in testa
+        new_node->next = llist->first;
+        llist->first = new_node;
+    }
+
+    return true;
+}
+
+bool llist_pop_first(linked_list_t* llist, void** data){
+    // Controllo la validità degli argomenti
+    if(!llist || !data){
+        errno = EINVAL;
+        return false;
+    }
+
+    // Controllo che la lista non sia vuota
+    if(!llist->first){
+        errno = ENOENT;
+        return false;
+    }
+
+    // Tengo un riferimento al nodo da rimuovere
+    list_node_t* node = llist->first;
+    // Se il nodo non è vuoto
+    if(node->data && node->data_size > 0){
+        // Alloco la memoria per copiare i dati
+        *data = malloc(node->data_size);
+        // Copio i dati nel puntatore <data>
+        memcpy(*data, node->data, node->data_size);
+    }else{
+        // Altrimenti imposto su NULL
+        *data = NULL;
+    }
+
+    // Aggiorno la lista, rimuovendo il nodo di testa
+    // Se la lista contiene solo il nodo corrente
+    if(!node->next){
+        llist->first = NULL;
+        llist->last = NULL;
+    }else{
+        // Altrimenti, porto in testa il suo successore
+        llist->first = node->next;
+    }
+    // Cancello il nodo
+    llist_node_destroy(node);
+
+    return true;
+}
+
