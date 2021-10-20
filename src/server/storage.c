@@ -129,12 +129,13 @@ storage_file_t* storage_file_create(const char* name, const void* contents, size
 void storage_file_destroy(void* file) {
     // Controllo la validità degli argomenti
     if (!file) return;
-    storage_file_t* _file = (storage_file_t*) file;
+    storage_file_t* f = (storage_file_t*)file;
     // Libero la memoria occupata dal file
-    if(_file->name) free(_file->name);
-    if(_file->contents) free(_file->contents);
-    rwlock_destroy(_file->rwlock);
-    free(_file);
+    if (f->name) free(f->name);
+    if (f->contents) free(f->contents);
+    if (f->readers) linked_list_destroy(f->readers);
+    rwlock_destroy(f->rwlock);
+    free(f);
 }
 
 void storage_print(storage_t* storage){

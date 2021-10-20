@@ -952,8 +952,10 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < THREADS_WORKER; i++) queue_push(task_queue, -1);
     // Quindi aspetto la loro imminente chiusura
     for (int i = 0; i < THREADS_WORKER; i++) pthread_join(thread_pool[i], NULL);
-    // E libero la memoria per la pool
+    // Libero la memoria della threadpool
     free(thread_pool);
+    // Libero la memoria della coda dei tasks
+    queue_destroy(task_queue);
 
     // Chiudo i socket
     close(server_socket);
