@@ -6,6 +6,7 @@
 #include <rwlock.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 // * Questa implementazione di Readers/Writers Lock adotta una politica "writers preferred", ovvero
 //  un lettore deve aspettare se ci sono scrittori attivi o in attesa, mentre
@@ -32,6 +33,9 @@ struct RWLock {
 rwlock_t* rwlock_create() {
     rwlock_t* rwlock = malloc(sizeof(rwlock_t));
     if (!rwlock) return NULL;
+
+    // Azzero la memoria allocata
+    memset(rwlock, 0, sizeof(rwlock_t));
 
     // Inizializzo i parametri relativi a lettori e scrittori
     rwlock->active_readers = 0;
