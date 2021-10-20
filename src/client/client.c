@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
                 // Salvo il comando
                 request->command = option;
                 // Salvo la lista di argomenti
-                if (!(request->arguments = malloc(strlen(optarg)))) {
+                if (!(request->arguments = malloc(strlen(optarg) + 1))) {
                     perror("Error: failed to allocate memory for request arguments");
                     return errno;
                 }
@@ -345,6 +345,7 @@ int main(int argc, char* argv[]) {
 
     // Libero la memoria
     free(SOCKET_PATH);
+    queue_destroy(request_queue);
 
     return EXIT_SUCCESS;
 }
