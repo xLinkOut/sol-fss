@@ -227,6 +227,9 @@ int main(int argc, char* argv[]) {
     // readFile
     void* buffer = NULL;
     size_t size = 0;
+    // readNFiles
+    long N = 0;
+    char* token = NULL;
 
     while ((request = queue_pop(request_queue))) {
         printf("%c %s (%s, %lu)\n", request->command, request->arguments, request->dirname, request->time);
@@ -275,6 +278,30 @@ int main(int argc, char* argv[]) {
 
                     filename = strtok_r(NULL, ",", &strtok_status);
                 }
+                break;
+
+            case 'R': // Leggo dal server un certo numero di files qualsiasi
+                // Parso il numero di file da leggere
+                if(!(token = strtok_r(request->arguments, "=", &strtok_status))){
+                    perror("Error: bad request");
+                    break;
+                }
+
+                if(!(token = strtok_r(NULL, "=", &strtok_status))){
+                    perror("Error: bad request");
+                    break;
+                }
+
+                if(!is_number(token, &N)){
+                    perror("Error: bad request");
+                    break;
+                }
+                
+                if(readNFiles(N, request->dirname) == -1){
+                    perror("Error: failed to read N files");
+                    break;
+                }
+
                 break;
 
             case 'l': // Acquisisco la mutua esclusione su un(a lista di) file

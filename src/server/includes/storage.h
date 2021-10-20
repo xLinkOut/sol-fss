@@ -85,6 +85,9 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
 // * Legge il file <pathname> dallo storage
 int storage_read_file(storage_t* storage, const char* pathname, void** contents, size_t* size, int client);
 
+// * Legge dallo storage <n> files e li invia al client
+int storage_read_n_files(storage_t* storage, int N, storage_file_t*** files_read, int client);
+
 // * Scrive nello storage il file <pathname> ed il suo contenuto <contents>
 int storage_write_file(storage_t* storage, const char* pathname, void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client);
 

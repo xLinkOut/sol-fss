@@ -355,6 +355,51 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
     return 0;
 }
 
+int storage_read_n_files(storage_t* storage, int N, storage_file_t*** read_files, int client) {
+    // Controllo la validità degli argomenti
+    if (!storage || !read_files) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Acquisisco l'accesso in lettura sullo storage
+    rwlock_start_read(storage->rwlock);
+
+    // Controllo i possibili valori di n
+    int actual_N = N;
+    // Se n <= 0 oppure è maggior del numero di files attualmente memorizzati, li leggo tutti
+    if (N <= 0 || N >= storage->number_of_files) actual_N = storage->number_of_files;
+
+    // Alloco la memoria necessaria
+    *read_files = malloc(sizeof(storage_file_t*) * actual_N);
+    int files_no = icl_hash_get_n_files(storage->files, actual_N, (void***)read_files);
+
+    if (files_no < 0) {
+        // L'operazione è fallita, ritorno errore
+        rwlock_done_read(storage->rwlock);
+        return -1;
+    }
+
+    for (int i = 0; i < files_no; i++) {
+        if ((*read_files)[i]) {
+            storage_file_t* current_file = (*read_files)[i];
+            // Acquisisco l'accesso in scrittura sul file
+            rwlock_start_write(current_file->rwlock);
+            // Aggiorno le informazioni di utilizzo
+            current_file->last_use_time = time(NULL);
+            current_file->frequency++;
+            // Rilascio l'accesso in scrittura sul file
+            rwlock_done_write(current_file->rwlock);
+        }
+    }
+
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
+
+    // Ritorno il numero di file letti
+    return files_no;
+}
+
 int storage_write_file(storage_t* storage, const char* pathname, void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client){
     // Controllo la validità degli argomenti
     if (!storage || !pathname || !contents || size <= 0) {
@@ -412,6 +457,7 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
         }
 
         // Effettuo una copia del file per poterlo inviare al client
+        // TODO: Wrappare *victims tra le parentesi tonde
         *victims[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
 
         // Elimino il file dallo storage

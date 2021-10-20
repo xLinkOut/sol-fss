@@ -359,6 +359,31 @@ void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* p
     return victim_name;
 }
 
+int icl_hash_get_n_files(icl_hash_t* ht, int N, void*** files){ 
+    if (!ht) return -1; // todo errno
+    
+    storage_file_t*** read_files = (storage_file_t***) files;
+    icl_entry_t *bucket, *curr;
+    int index = 0;
+    storage_file_t* current_file = NULL;
+    for (int i = 0; i < ht->nbuckets && index < N; i++) {
+        bucket = ht->buckets[i];
+        for (curr = bucket; curr != NULL && index < N;) {
+            if (curr->key){
+                // Prendo il file corrente
+                current_file = (storage_file_t*) curr->data;
+                printf("%s %p %zu\n", current_file->name, current_file->contents, current_file->size);
+                storage_file_t* new_file = storage_file_create(current_file->name, current_file->contents, current_file->size);
+                (*read_files)[index] = new_file;
+                index++;
+            }
+            curr = curr->next;
+        }
+    }
+
+    return index;
+}
+
 void icl_hash_print(icl_hash_t* ht){
     if (!ht) return;
     

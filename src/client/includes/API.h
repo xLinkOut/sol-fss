@@ -23,6 +23,9 @@ int openFile(const char* pathname, int flags);
 // * Legge il contenuto del file <pathname> nel buffer <buf>
 int readFile(const char* pathname, void** buf, size_t* size, const char* dirname);
 
+// * Legge dal server il contenuto di <N> files qualsiasi, da memorizzare eventualmente in <dirname>
+int readNFiles(int N, const char* dirname);
+
 // * Scrive il file <pathname> sul server, e salva in <dirname> eventuali file espulsi
 int writeFile(const char* pathname, const char* dirname);
 

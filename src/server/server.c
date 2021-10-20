@@ -128,6 +128,10 @@ static void* worker(void* args) {
     char pathname[MESSAGE_LENGTH];  // Quasi ogni API call prevede un pathname
     void* contents = NULL;
 
+    // readNFiles
+    int N = 0;
+    storage_file_t** files_read = NULL;
+
     // ! MAIN WORKER LOOP
     // TODO: condizione while, eseguo finché !force_stop, ma nel caso di stop? Come faccio a eseguire finché i client non finiscono?
     while (1) {
@@ -256,7 +260,57 @@ static void* worker(void* args) {
 
                 log_event("INFO", "Storage read file with code ");
                 break;
-                
+
+            case READN:  // ! readNFiles: READN <int:n>
+                // Parso il numero di files dalla richiesta
+                token = strtok_r(NULL, " ", &strtok_status);
+                if (!token || sscanf(token, "%d", &N) != 1) {
+                    fprintf(stderr, "Error: bad request\n");
+                    break;
+                }
+
+                printf("READN: %d\n", N);
+
+                files_read = NULL;
+                // Il codice di uscita di storage_read_n_files indica
+                //  quanti file sono stati effettivamente letti (-1 indica errore)
+                api_exit_code = storage_read_n_files(worker_args->storage, N, &files_read, fd_ready);
+
+                // Invio al client il numero di files letti
+                memset(response, 0, MESSAGE_LENGTH);
+                snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
+                if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                    perror("Error: writen failed");
+                    break;
+                }
+
+                // Se presenti, invio al client i files letti
+                if (api_exit_code > 0) {
+                    for (int i = 0; i < api_exit_code; i++) {
+                        printf("Sending n.%d: %s %zd\n", i + 1, files_read[i]->name, files_read[i]->size);
+
+                        // Invio al client il nome e la dimensione del file
+                        memset(response, 0, MESSAGE_LENGTH);
+                        snprintf(response, MESSAGE_LENGTH, "%s %zu", files_read[i]->name, files_read[i]->size);
+                        if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                            perror("Error: writen failed");
+                            break;
+                        }
+
+                        // Invio al client il contenuto del file
+                        if (writen((long)fd_ready, files_read[i]->contents, files_read[i]->size) == -1) {
+                            perror("Error: writen failed");
+                            break;
+                        }
+
+                        // Libero la memoria dal file appena inviato
+                        storage_file_destroy((void*)files_read[i]);
+                    }
+                }
+
+                log_event("INFO", "Storage read n file with code ");
+                break;
+
             case WRITE: // ! writeFile: WRITE <str:pathname> <int:file_size>
                 // Parso il pathname del file
                 token = strtok_r(NULL, " ", &strtok_status);

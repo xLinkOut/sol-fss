@@ -252,6 +252,138 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
     return -1;
 }
 
+int readNFiles(int N, const char* dirname) {
+    // Controllo che sia stata instaurata una connessione con il server
+    if (client_socket == -1) {
+        errno = ENOTCONN;
+        return -1;
+    }
+
+    // Invio al server la richiesta di READN
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %d", READN, N);
+    if (writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
+        return -1;
+    }
+
+    if (VERBOSE) printf("Request to read %d file(s)...\n", N);
+
+    // Ricevo dal server il numero di file effettivamente letti
+    int files_no = 0;
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
+        return -1;
+    }
+    if (sscanf(message_buffer, "%d", &files_no) != 1) {
+        errno = EBADMSG;
+        return -1;
+    }
+
+    // Se il numero di file è negativo, qualcosa è andato storto
+    if (files_no < 0) {
+        if (VERBOSE) printf("Something went wrong!\n");
+        return -1;
+    }
+
+    // Se il numero di file è zero, nessun file è disponibile per la lettura
+    if (files_no == 0) {
+        if (VERBOSE) printf("There are no files available for reading\n");
+        return 0;
+    }
+
+    // files_no > 0
+    if (VERBOSE) printf("%d file(s) have been read from the server\n", files_no);
+
+    char* token = NULL;                  // Appoggio per strtok_r
+    size_t file_size = 0;                // Dimensione del file da leggere
+    void* file_contents = NULL;          // Contenuto del file da leggere
+    char* strtok_status = NULL;          // Stato per strtok_r
+    char file_pathname[MESSAGE_LENGTH];  // Pathname del file
+
+    for (int i = 0; i < files_no; i++) {
+        // Ricevo dal server il nome e la dimensione del file
+        memset(message_buffer, 0, MESSAGE_LENGTH);
+        memset(file_pathname, 0, MESSAGE_LENGTH);
+        if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
+            return -1;
+        }
+
+        // Pathname
+        token = strtok_r(message_buffer, " ", &strtok_status);
+        if (!token || sscanf(token, "%s", file_pathname) != 1) {
+            errno = EBADMSG;
+            return -1;
+        }
+        // Size
+        token = strtok_r(NULL, " ", &strtok_status);
+        if (!token || sscanf(token, "%zu", &file_size) != 1) {
+            errno = EBADMSG;
+            return -1;
+        }
+
+        if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i + 1, file_size, file_pathname);
+
+        // Alloco spazio per il file
+        file_contents = malloc(file_size + 1);
+        if (!file_contents) return -1;
+        memset(file_contents, 0, file_size + 1);
+
+        // Ricevo il contenuto del file
+        if (readn((long)client_socket, file_contents, file_size) == -1) {
+            free(file_contents);
+            return -1;
+        }
+
+        // Se il client ha specificato una cartella in cui salvare i file letti,
+        //  procedo a salvare i file ricreando l'albero delle directories specificato nel pathname
+        if (dirname) {
+            // Creo il path completo per il salvataggio del file
+            // Calcolo la lunghezza del path indicato da dirname
+            size_t dirname_length = strlen(dirname);
+            char abs_path[4096];  // => dirname/file_pathname, // TODO: MAX_PATH in linux/limits.h
+            memset(abs_path, 0, 4096);
+
+            // Gestisco il caso in cui dirname termina con '/' e file_pathname inizia con '/'
+            //if(dirname[dirname_length-1] == '/' && file_pathname[0] == '/') dirname[dirname_length-1] = '\0';
+            // Controllo se dirname termina con '/' oppure file_pathname inizia con '/'
+            int slash = dirname[dirname_length - 1] == '/' || file_pathname[0] == '/';
+            // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
+            snprintf(abs_path, 4096, slash ? "%s%s" : "%s/%s", dirname, file_pathname);
+
+            // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
+            //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
+            //  per poter contenere il file, in maniera ricorsiva. Un comportamento simile al comando 'mkdir -p <path>'
+            if (VERBOSE) printf("Saving file to '%s'\n", abs_path);
+            mkdir_p(abs_path);
+
+            // Apro il file in scrittura
+            FILE* output_file = fopen(abs_path, "w");
+            if (!output_file) {
+                free(file_contents);
+                return -1;
+            }
+
+            // Scrivo il contenuto del file su disco
+            if (fputs(file_contents, output_file) == EOF) {
+                fclose(output_file);
+                free(file_contents);
+                return -1;
+            }
+
+            // Chiudo il file
+            if (fclose(output_file) == -1) {
+                free(file_contents);
+                return -1;
+            }
+
+            if (VERBOSE) printf("%zd bytes saved to '%s'\n", file_size, abs_path);
+        }
+        free(file_contents);
+    }
+
+    return files_no;
+}
+
 int writeFile(const char* pathname, const char* dirname){
     // Controllo la validità degli argomenti
     if(!pathname){
