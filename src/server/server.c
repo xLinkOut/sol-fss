@@ -316,6 +316,9 @@ static void* worker(void* args) {
                             perror("Error: writen failed");
                             break;
                         }
+
+                        // Libero la memoria dal file appena inviato
+                        storage_file_destroy((void*) victims[i]);
                     }
                 }
                 
@@ -390,6 +393,9 @@ static void* worker(void* args) {
                             perror("Error: writen failed");
                             break;
                         }
+
+                        // Libero la memoria dal file appena inviato
+                        storage_file_destroy((void*) victims[i]);
                     }
                 }
 

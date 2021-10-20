@@ -393,6 +393,9 @@ int writeFile(const char* pathname, const char* dirname){
         }
     }
 
+    // Libero la memoria dal file letto
+    free(contents);
+
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
     if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
