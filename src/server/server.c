@@ -688,7 +688,7 @@ int main(int argc, char* argv[]) {
                     fprintf(stderr, "Error: %s has an invalid value (%s)\n", key, value);
                     return EINVAL;
                 }
-                STORAGE_MAX_CAPACITY = (size_t)numeric_value;
+                STORAGE_MAX_CAPACITY = (size_t)(numeric_value * MEGABYTES);
 
             } else if (strcmp(key, "STORAGE_MAX_FILES") == 0 || numeric_value <= 0) {
                 // * STORAGE_MAX_FILES
