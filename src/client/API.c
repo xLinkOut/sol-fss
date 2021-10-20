@@ -207,9 +207,9 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
         // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
         //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
         // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
-        int backslash = dirname[dirname_length-1] == '/' || pathname[0] == '/';
+        int slash = dirname[dirname_length-1] == '/' || pathname[0] == '/';
         // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
-        snprintf(abs_path, 4096, backslash ? "%s%s" : "%s/%s", dirname, pathname);
+        snprintf(abs_path, 4096, slash ? "%s%s" : "%s/%s", dirname, pathname);
 
         // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
         //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
@@ -369,9 +369,9 @@ int writeFile(const char* pathname, const char* dirname){
                 // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
                 //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
                 // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
-                int backslash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
+                int slash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
                 // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
-                snprintf(abs_path, 4096, backslash ? "%s%s" : "%s/%s", dirname, victim_pathname);\
+                snprintf(abs_path, 4096, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);\
 
                 // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
                 //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
@@ -514,9 +514,9 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
                 // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
                 //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
                 // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
-                int backslash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
+                int slash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
                 // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
-                snprintf(abs_path, 4096, backslash ? "%s%s" : "%s/%s", dirname, victim_pathname);
+                snprintf(abs_path, 4096, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);
 
                 // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
                 //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
