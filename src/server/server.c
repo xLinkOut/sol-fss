@@ -280,7 +280,7 @@ static void* worker(void* args) {
                 void* contents = malloc(file_size);
                 memset(contents, 0, file_size);
                 // Ricevo dal client il contenuto del file
-                if(readn((long)fd_ready, (void*)contents, file_size) == -1){
+                if(readn((long)fd_ready, contents, file_size) == -1){
                     perror("Error: readn failed");
                     free(contents);
                     break;
@@ -312,7 +312,7 @@ static void* worker(void* args) {
                         }
 
                         // Invio al client il contenuto del file
-                        if (writen((long)fd_ready, (void*)victims[i]->contents, victims[i]->size) == -1) {
+                        if (writen((long)fd_ready, victims[i]->contents, victims[i]->size) == -1) {
                             perror("Error: writen failed");
                             break;
                         }
@@ -356,7 +356,7 @@ static void* worker(void* args) {
                 contents = malloc(file_size);
                 memset(contents, 0, file_size);
                 // Ricevo dal client il contenuto del file
-                if(readn((long)fd_ready, (void*)contents, file_size) == -1){
+                if(readn((long)fd_ready, contents, file_size) == -1){
                     perror("Error: readn failed");
                     free(contents);
                     break;
@@ -389,7 +389,7 @@ static void* worker(void* args) {
                         }
 
                         // Invio al client il contenuto del file
-                        if (writen((long)fd_ready, (void*)victims[i]->contents, victims[i]->size) == -1) {
+                        if (writen((long)fd_ready, victims[i]->contents, victims[i]->size) == -1) {
                             perror("Error: writen failed");
                             break;
                         }

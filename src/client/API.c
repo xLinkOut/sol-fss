@@ -299,7 +299,7 @@ int writeFile(const char* pathname, const char* dirname){
     if(fclose(file) == -1) return -1;
 
     // Invio il contenuto del file al server
-    if (writen((long)client_socket, (void*)contents, file_stat.st_size) == -1) {
+    if (writen((long)client_socket, contents, file_stat.st_size) == -1) {
         return -1;
     }
 
@@ -353,7 +353,7 @@ int writeFile(const char* pathname, const char* dirname){
                 return -1;
             }
             memset(victim_contents, 0, victim_size);
-            if(readn((long)client_socket, (void*)victim_contents, victim_size) == -1){
+            if(readn((long)client_socket, victim_contents, victim_size) == -1){
                 return -1;
             }
 
@@ -444,7 +444,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     if(VERBOSE) printf("Request to append %zd bytes to '%s' file...\n", size, pathname);
     
     // Invio il contenuto del file che voglio scrivere
-    if (writen((long)client_socket, (void*)buf, size) == -1) {
+    if (writen((long)client_socket, buf, size) == -1) {
         return -1;
     }
 
@@ -498,7 +498,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
                 return -1;
             }
             memset(victim_contents, 0, victim_size);
-            if(readn((long)client_socket, (void*)victim_contents, victim_size) == -1){
+            if(readn((long)client_socket, victim_contents, victim_size) == -1){
                 return -1;
             }
 

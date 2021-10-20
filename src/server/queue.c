@@ -17,7 +17,7 @@ Queue_t* queue_init() {
 
     // Creo il nodo di testa
     if (!(queue->head = malloc(sizeof(Node_t)))) {
-        free((void*)queue);
+        free(queue);
         return NULL;
     }
 
@@ -33,8 +33,8 @@ Queue_t* queue_init() {
     // Inizializzo l'ccesso mutualmente esclusivo
     if (pthread_mutex_init(&queue->mutex, NULL) != 0) {
         perror("Error: unable to init Queue mutex");
-        free((void*)queue->head);
-        free((void*)queue);
+        free(queue->head);
+        free(queue);
         return NULL;
     }
 
@@ -42,8 +42,8 @@ Queue_t* queue_init() {
     if (pthread_cond_init(&queue->empty, NULL) != 0) {
         perror("Error: unable to init Queue empty condition variable");
         pthread_mutex_destroy(&queue->mutex);
-        free((void*)queue->head);
-        free((void*)queue);
+        free(queue->head);
+        free(queue);
         return NULL;
     }
 
@@ -56,9 +56,9 @@ void queue_destroy(Queue_t* queue) {
     while (queue->head != queue->tail) {
         Node_t* node = (Node_t*)queue->head;
         queue->head = queue->head->next;
-        free((void*)node);
+        free(node);
     }
-    if (queue->head) free((void*)queue->head);
+    if (queue->head) free(queue->head);
     // Il compilatore qui consiglia di non controllare mutex ed empty, perché
     // "address of 'queue->mutex' (lo stesso per queue->empty) will always evaluate to 'true'"
     pthread_mutex_destroy(&queue->mutex);
@@ -120,6 +120,6 @@ int queue_pop(Queue_t* queue) {
     // ? Controllare che length sia >= 0 ?
     UNLOCK(&queue->mutex);
 
-    free((void*)node);
+    free(node);
     return fd_ready;
 }
