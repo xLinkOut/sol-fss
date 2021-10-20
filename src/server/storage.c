@@ -76,12 +76,13 @@ storage_file_t* storage_file_create(const char* name, const void* contents, size
     if (!file) return NULL;
 
     // Salvo il nome del file
-    if ((file->name = malloc(strlen(name) + 1)) == NULL) {
+    size_t length = strlen(name);
+    if ((file->name = malloc(length + 1)) == NULL) {
         free(file);
         return NULL;
     }
-    memset(file->name, 0, sizeof(file->name));
-    strncpy(file->name, name, strlen(name) + 1);
+    memset(file->name, 0, length + 1);
+    strncpy(file->name, name, length);
 
     // Salvo il contenuto del file
     if (contents && size != 0) {
@@ -125,14 +126,15 @@ storage_file_t* storage_file_create(const char* name, const void* contents, size
     return file;
 }
 
-void storage_file_destroy(storage_file_t* file) {
+void storage_file_destroy(void* file) {
     // Controllo la validità degli argomenti
     if (!file) return;
+    storage_file_t* _file = (storage_file_t*) file;
     // Libero la memoria occupata dal file
-    free(file->name);
-    free(file->contents);
-    rwlock_destroy(file->rwlock);
-    free(file);
+    free(_file->name);
+    free(_file->contents);
+    rwlock_destroy(_file->rwlock);
+    free(_file);
 }
 
 void storage_print(storage_t* storage){
@@ -169,7 +171,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
     rwlock_start_read(storage->rwlock);
 
     // Controllo se il file esiste all'interno dello storage
-    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    storage_file_t* file = icl_hash_find(storage->files, (void*) pathname);
     // Mantengo separata l'informazione sull'esistenza del file per leggibilità
     bool already_exists = (bool)file;
 
@@ -265,7 +267,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         // Lo apro in lettura per il client
         if(!linked_list_insert(file->readers, client)){
             // Errore di inserimento in lista
-            storage_file_destroy(file);
+            storage_file_destroy((void*)file);
             rwlock_done_write(storage->rwlock);
             // Errno viene settato da linked_list_insert
             return -1;
@@ -277,7 +279,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         // Inserisco il file nello storage
         if(!icl_hash_insert(storage->files, file->name, file)){
             // Se l'inserimento nello storage fallisce, libero la memoria e ritorno errore
-            storage_file_destroy(file);
+            storage_file_destroy((void*)file);
             rwlock_done_write(storage->rwlock);
             // Errno viene settato da icl_hash_insert
             return -1;
@@ -310,7 +312,7 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
     rwlock_start_read(storage->rwlock);
 
     // Recupero il file dallo storage
-    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    storage_file_t* file = icl_hash_find(storage->files, (void*) pathname);
 
     // Controllo se il file esiste all'interno dello storage
     if (!file) {
@@ -352,7 +354,7 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
     return 0;
 }
 
-int storage_write_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client){
+int storage_write_file(storage_t* storage, const char* pathname, void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client){
     // Controllo la validità degli argomenti
     if (!storage || !pathname || !contents || size <= 0) {
         errno = EINVAL;
@@ -371,7 +373,7 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     }
 
     // Recupero il file dallo storage
-    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    storage_file_t* file = icl_hash_find(storage->files, (void*) pathname);
 
     // Controllo che il file che si vuole scrivere esista nello storage
     if (!file) {
@@ -412,7 +414,7 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
         *victims[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
 
         // Elimino il file dallo storage
-        if(icl_hash_delete(storage->files, victim->name, NULL, &storage_file_destroy) == -1){
+        if(icl_hash_delete(storage->files, victim->name, NULL,storage_file_destroy) == -1){
             // Errore nella cancellazione del file
             printf("Errore nella cancellazione del file\n");
         }
@@ -428,7 +430,7 @@ int storage_write_file(storage_t* storage, const char* pathname, const void* con
     printf("Victims number: %d\n", *victims_no);
     if(*victims && *victims_no > 0)
         for(int i=0;i < *victims_no;i++)
-            printf("Victim n.%d: %s %d %p\n", i, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
+            printf("Victim n.%d: %s %zu %p\n", i, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
 
     if(*victims_no == 0) free(*victims);
 
@@ -481,7 +483,7 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
     rwlock_start_read(storage->rwlock);
 
     // Recupero il file dallo storage
-    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    storage_file_t* file = icl_hash_find(storage->files, (void*) pathname);
 
     // Controllo che il file che si vuole scrivere esista nello storage
     if (!file) {
@@ -529,7 +531,7 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
         *victims[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
 
         // Elimino il file dallo storage
-        if(icl_hash_delete(storage->files, victim->name, NULL, &storage_file_destroy) == -1){
+        if(icl_hash_delete(storage->files, victim->name, NULL,storage_file_destroy) == -1){
             // Errore nella cancellazione del file
             printf("Errore nella cancellazione del file\n");
         }
@@ -545,7 +547,7 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
     printf("Victims number: %d\n", *victims_no);
     if(*victims && *victims_no > 0)
         for(int i=0;i < *victims_no;i++)
-            printf("Victim n.%d: %s %d %p\n", i, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
+            printf("Victim n.%d: %s %zu %p\n", i, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
 
     if(*victims_no == 0) free(*victims);
 
@@ -596,7 +598,7 @@ int storage_lock_file(storage_t* storage, const char* pathname, int client){
     rwlock_start_read(storage->rwlock);
 
     // Recupero il file dallo storage
-    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    storage_file_t* file = icl_hash_find(storage->files, (void*) pathname);
     
     // Rilascio l'accesso in lettura sullo storage
     rwlock_done_read(storage->rwlock);
@@ -657,7 +659,7 @@ int storage_unlock_file(storage_t* storage, const char* pathname, int client){
     rwlock_start_read(storage->rwlock);
 
     // Recupero il file dallo storage
-    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    storage_file_t* file = icl_hash_find(storage->files, (void*) pathname);
     
     // Rilascio l'accesso in lettura sullo storage
     rwlock_done_read(storage->rwlock);
@@ -711,7 +713,7 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
     rwlock_start_read(storage->rwlock);
 
     // Controllo se il file esiste all'interno dello storage
-    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    storage_file_t* file = icl_hash_find(storage->files, (void*) pathname);
 
     // Se non esiste, ritorno subito errore
     if (!file) {
@@ -775,7 +777,7 @@ int storage_remove_file(storage_t* storage, const char* pathname, int client){
     rwlock_start_read(storage->rwlock);
 
     // Recupero il file dallo storage
-    storage_file_t* file = icl_hash_find(storage->files, pathname);
+    storage_file_t* file = icl_hash_find(storage->files, (void*) pathname);
     
     // Controllo che il file esista
     if (!file) {
@@ -809,7 +811,7 @@ int storage_remove_file(storage_t* storage, const char* pathname, int client){
     // A questo punto, file->writer sarà pari a client, per costruzione, 
     // ovvero client ha in precedenza aperto il file in scrittura
     // Cancello quindi il file dallo storage
-    if(icl_hash_delete(storage->files, pathname, NULL, &storage_file_destroy) == -1){
+    if(icl_hash_delete(storage->files, (void*) pathname, NULL,storage_file_destroy) == -1){
         // TODO: funzione di free per file
         rwlock_done_write(storage->rwlock);    
         return -1;

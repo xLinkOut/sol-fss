@@ -76,7 +76,7 @@ void storage_print(storage_t* storage);
 storage_file_t* storage_file_create(const char* name, const void* contents, size_t size);
 
 // * Cancella uno storage file creato con storage_file_create
-void storage_file_destroy(storage_file_t* file);
+void storage_file_destroy(void* file);
 
 // ! APIs
 // * Crea e/o apre il file <pathname> in lettura ed eventualmente in scrittura, in accordo a <flags>
@@ -86,7 +86,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
 int storage_read_file(storage_t* storage, const char* pathname, void** contents, size_t* size, int client);
 
 // * Scrive nello storage il file <pathname> ed il suo contenuto <contents>
-int storage_write_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client);
+int storage_write_file(storage_t* storage, const char* pathname, void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client);
 
 // * Aggiunge <contents>, di dimensione <size>, in fondo al file <pathname>
 int storage_append_to_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client);

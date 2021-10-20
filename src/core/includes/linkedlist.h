@@ -2,6 +2,9 @@
 
 // * Linked List, con inserimento in coda e rimozione partendo dalla testa
 
+#ifndef _LINKED_LIST_H_
+#define _LINKED_LIST_H_
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -39,3 +42,5 @@ bool linked_list_find(linked_list_t* llist, int data);
 
 // * Visualizza la lista a schermo
 void linked_list_print(linked_list_t* llist);
+
+#endif

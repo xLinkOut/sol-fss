@@ -3,12 +3,14 @@
 #ifndef _REQUEST_QUEUE_H_
 #define _REQUEST_QUEUE_H_
 
+#include <time.h>
+
 // * Struttura dati di una richiesta in coda
 typedef struct Request {
-    char command;        // Un comando tra w|W|r|R|l|u|c
-    char* arguments;     // Uno o più argomenti tra dirname[,n=0]|file1[,file2]|[n=0]
-    char* dirname;       // Parametro opzionale utilizzato congiuntamente a w|W|r|R
-    unsigned long time;  // Tempo di attesa in millisecondi tra una richiesta e l'altra
+    char command;     // Un comando tra w|W|r|R|l|u|c
+    char* arguments;  // Uno o più argomenti tra dirname[,n=0]|file1[,file2]|[n=0]
+    char* dirname;    // Parametro opzionale utilizzato congiuntamente a w|W|r|R
+    time_t time;      // Tempo di attesa in millisecondi tra una richiesta e l'altra
     struct Request* next;
 } Request_t;
 

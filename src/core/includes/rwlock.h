@@ -2,6 +2,9 @@
 
 // * Readers/Writers Lock
 
+#ifndef _RWLOCK_H_
+#define _RWLOCK_H_
+
 #include <pthread.h>
 #include <stdbool.h>
 
@@ -25,3 +28,5 @@ bool rwlock_done_write(rwlock_t* rwlock);
 
 // I metodi read_should_wait e write_should_wait vengono utilizzati solo internamente,
 //  quindi sono stati omessi dall'header di RWLock
+
+#endif

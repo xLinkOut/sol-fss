@@ -305,7 +305,7 @@ static void* worker(void* args) {
                         printf("Sending n.%d: %s %zd\n", i, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
-                        snprintf(response, MESSAGE_LENGTH, "%s %d", victims[i]->name, victims[i]->size);
+                        snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
                         if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
                             perror("Error: writen failed");
                             break;
@@ -379,7 +379,7 @@ static void* worker(void* args) {
                         printf("Sending n.%d: %s %zd\n", i, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
-                        snprintf(response, MESSAGE_LENGTH, "%s %d", victims[i]->name, victims[i]->size);
+                        snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
                         if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
                             perror("Error: writen failed");
                             break;
