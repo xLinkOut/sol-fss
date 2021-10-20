@@ -190,7 +190,7 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
     //printf("%d %zd\n", result, size_from_server);
 
     // Ricevo il file dal server
-    *buf = malloc(*size);
+    *buf = malloc(*size); // Chiamare la free di questa memoria è compito del client
     memset(*buf, 0, *size);
     if(readn((long)client_socket, *buf, *size) == -1){
         return -1;
@@ -293,15 +293,22 @@ int writeFile(const char* pathname, const char* dirname){
 
     // Alloco la memoria necessaria per leggere il file
     void* contents = malloc(file_stat.st_size);
+    if(!contents) return -1;
     // Leggo il contenuto del file come un unico blocco di dimensione file_stat.st_size
     fread(contents, file_stat.st_size, 1, file);
     // Chiudo il file
-    if(fclose(file) == -1) return -1;
+    if(fclose(file) == -1){
+        free(contents);
+        return -1;
+    }
 
     // Invio il contenuto del file al server
     if (writen((long)client_socket, contents, file_stat.st_size) == -1) {
         return -1;
     }
+
+    // Libero la memoria dal file letto
+    free(contents);
 
     // Ricevo dal server eventuali file espulsi
     int victims_no = 0;
@@ -348,10 +355,8 @@ int writeFile(const char* pathname, const char* dirname){
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
-            if(!victim_contents){
-                perror("malloc");
-                return -1;
-            }
+            if(!victim_contents) return -1;
+
             memset(victim_contents, 0, victim_size);
             if(readn((long)client_socket, victim_contents, victim_size) == -1){
                 return -1;
@@ -392,9 +397,6 @@ int writeFile(const char* pathname, const char* dirname){
             free(victim_contents);
         }
     }
-
-    // Libero la memoria dal file letto
-    free(contents);
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
@@ -493,10 +495,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
-            if(!victim_contents){
-                perror("malloc");
-                return -1;
-            }
+            if(!victim_contents) return -1;
             memset(victim_contents, 0, victim_size);
             if(readn((long)client_socket, victim_contents, victim_size) == -1){
                 return -1;

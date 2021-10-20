@@ -131,8 +131,8 @@ void storage_file_destroy(void* file) {
     if (!file) return;
     storage_file_t* _file = (storage_file_t*) file;
     // Libero la memoria occupata dal file
-    free(_file->name);
-    free(_file->contents);
+    if(_file->name) free(_file->name);
+    if(_file->contents) free(_file->contents);
     rwlock_destroy(_file->rwlock);
     free(_file);
 }
@@ -339,7 +339,7 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
 
     // Copio il contenuto e la dimensione del file
     *size = file->size;
-    *contents = malloc(file->size);
+    *contents = malloc(file->size); // Chiamare la free di questa memoria è compito del server
     memcpy(*contents, file->contents, file->size);
 
     // Aggioro le statistiche del file

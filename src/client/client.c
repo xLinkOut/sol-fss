@@ -332,6 +332,8 @@ int main(int argc, char* argv[]) {
             };
             nanosleep(&sleep_time, NULL);  // Aspetto per request->time millisecondi
         }
+        // Libero la memoria
+        queue_destroy_request(request);
     }
 
     // * Chiusura della connessione con il server
@@ -340,6 +342,9 @@ int main(int argc, char* argv[]) {
         return errno;
     }
     if (VERBOSE) printf("Connection on '%s' closed\n", SOCKET_PATH);
+
+    // Libero la memoria
+    free(SOCKET_PATH);
 
     return EXIT_SUCCESS;
 }

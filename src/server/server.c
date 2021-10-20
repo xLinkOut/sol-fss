@@ -126,7 +126,8 @@ static void* worker(void* args) {
     char request[MESSAGE_LENGTH];   // Messaggio richiesta del client
     char response[MESSAGE_LENGTH];  // Messaggio risposta del server
     char pathname[MESSAGE_LENGTH];  // Quasi ogni API call prevede un pathname
-    
+    void* contents = NULL;
+
     // ! MAIN WORKER LOOP
     // TODO: condizione while, eseguo finché !force_stop, ma nel caso di stop? Come faccio a eseguire finché i client non finiscono?
     while (1) {
@@ -218,16 +219,15 @@ static void* worker(void* args) {
                 printf("READ: %s\n", pathname);
                 
                 // Eseguo la API call
-                void* f_contents = NULL;
+                contents = NULL;
                 size_t size = 0;
-                api_exit_code = storage_read_file(worker_args->storage, pathname, &f_contents, &size, fd_ready);
+                api_exit_code = storage_read_file(worker_args->storage, pathname, &contents, &size, fd_ready);
                 
                 int code = 1;
                 if(api_exit_code == -1){
                     if(errno == ENOENT) code = 0;
                     else if (errno == EPERM) code = -1;
                 }
-                //printf("readfile exit code %d\n", api_exit_code);
 
                 // Invio al client il codice di ritorno e, eventualmente, la dimensione del file
                 memset(response, 0, MESSAGE_LENGTH);
@@ -238,13 +238,13 @@ static void* worker(void* args) {
                 }
                 
                 if(api_exit_code == -1) break;
-                if (writen((long)fd_ready, f_contents, size) == -1) {
+                if (writen((long)fd_ready, contents, size) == -1) {
                     perror("Error: writen failed");
                     break;
                 }
 
                 // Libero la memoria occupata per leggere il file
-                free(f_contents);
+                free(contents);
 
                 // TODO: fix this, usare direttamente code come codice risposta
                 memset(response, 0, MESSAGE_LENGTH);
@@ -277,7 +277,11 @@ static void* worker(void* args) {
                 printf("WRITE: %s %zd\n", pathname, file_size);
 
                 // Conosco la dimensione del file, posso allocare lo spazio necessario
-                void* contents = malloc(file_size);
+                contents = malloc(file_size); // Liberare questa memoria è compito di storage_file_destroy
+                if(!contents){
+                    perror("Error: failed to allocate memory for contents");
+                    break;
+                }
                 memset(contents, 0, file_size);
                 // Ricevo dal client il contenuto del file
                 if(readn((long)fd_ready, contents, file_size) == -1){
@@ -353,7 +357,11 @@ static void* worker(void* args) {
                 printf("APPEND: %s %zd\n", pathname, file_size);
 
                 // Conosco la dimensione del file, posso allocare lo spazio necessario
-                contents = malloc(file_size);
+                contents = malloc(file_size); // Questa memoria viene liberata poco più in basso dal server
+                if(!contents){
+                    perror("Error: failed to allocate memory for contents");
+                    break;
+                }
                 memset(contents, 0, file_size);
                 // Ricevo dal client il contenuto del file
                 if(readn((long)fd_ready, contents, file_size) == -1){
@@ -367,6 +375,9 @@ static void* worker(void* args) {
                 victims_no = 0;
                 victims = NULL;
                 api_exit_code = storage_append_to_file(worker_args->storage, pathname, contents, file_size, &victims_no, &victims, fd_ready);
+
+                // Libero la memoria
+                free(contents);
 
                 // Invio al client eventuali file espulsi
                 memset(response, 0, MESSAGE_LENGTH);
@@ -954,6 +965,9 @@ int main(int argc, char* argv[]) {
 
     // Cancello lo storage
     storage_destroy(storage);
+
+    // E glie argomenti dei threads
+    free(worker_args);
 
     // Elimino il socket file
     unlink(SOCKET_PATH);
