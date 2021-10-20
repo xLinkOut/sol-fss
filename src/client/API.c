@@ -389,7 +389,7 @@ int writeFile(const char* pathname, const char* dirname){
                 if(VERBOSE) printf("%zd bytes saved to '%s'!\n", victim_size, abs_path);
             }
 
-            free(contents);
+            free(victim_contents);
         }
     }
 
