@@ -545,7 +545,7 @@ int main(int argc, char* argv[]) {
 
     if (argc == 1) {
         // * <config_path> non specificato
-        if ((CONFIG_PATH = (char*)malloc(sizeof(char) * (strlen(DEFAULT_CONFIG_PATH) + 1))) == NULL) {
+        if ((CONFIG_PATH = malloc(strlen(DEFAULT_CONFIG_PATH) + 1)) == NULL) {
             perror("Error: unable to allocate memory using malloc");
             return errno;
         }
@@ -553,7 +553,7 @@ int main(int argc, char* argv[]) {
         printf("Warning: missing <config_path>, assuming '%s' is in the current directory.\n", CONFIG_PATH);
     } else if (argc == 2) {
         // * <config_path> presente
-        if ((CONFIG_PATH = (char*)malloc(sizeof(char) * (strlen(argv[1]) + 1))) == NULL) {
+        if ((CONFIG_PATH = malloc(strlen(argv[1]) + 1)) == NULL) {
             perror("Error: unable to allocate memory using malloc");
             return errno;
         }
@@ -648,7 +648,7 @@ int main(int argc, char* argv[]) {
 
             } else if (strcmp(key, "SOCKET_PATH") == 0) {
                 // * SOCKET_PATH
-                if ((SOCKET_PATH = (char*)malloc(sizeof(char) * value_length)) == NULL) {
+                if ((SOCKET_PATH = malloc(value_length)) == NULL) {
                     perror("Error: unable to allocate memory using malloc for SOCKET_PATH");
                     return errno;
                 }
@@ -656,7 +656,7 @@ int main(int argc, char* argv[]) {
 
             } else if (strcmp(key, "LOG_PATH") == 0) {
                 // * LOG_PATH
-                if ((LOG_PATH = (char*)malloc(sizeof(char) * value_length)) == NULL) {
+                if ((LOG_PATH = malloc(value_length)) == NULL) {
                     perror("Error: unable to allocate memory using malloc for LOG_PATH");
                     return errno;
                 }

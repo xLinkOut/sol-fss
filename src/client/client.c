@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 
                 // Salvo il path del socket
                 //SOCKET_PATH = strdup(optarg);
-                if (!(SOCKET_PATH = malloc(sizeof(char) * (strlen(optarg) + 1)))) {
+                if (!(SOCKET_PATH = malloc(strlen(optarg) + 1))) {
                     perror("Error: failed to allocate memory for SOCKET_PATH");
                     return errno;
                 }
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
                 // Salvo il comando
                 request->command = option;
                 // Salvo la lista di argomenti
-                if (!(request->arguments = malloc(sizeof(char) * strlen(optarg)))) {
+                if (!(request->arguments = malloc(strlen(optarg)))) {
                     perror("Error: failed to allocate memory for request arguments");
                     return errno;
                 }
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
                     return EINVAL;
                 }
                 // Quindi, alloco lo spazio per salvare l'argomento
-                if (!(request->dirname = malloc(sizeof(char) * strlen(optarg)))) {
+                if (!(request->dirname = malloc(strlen(optarg) + 1))) {
                     perror("Error: failed to allocate memory for request dirname");
                     return errno;
                 }
@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
                     return EINVAL;
                 }
                 // Quindi, alloco lo spazio per salvare l'argomento
-                if (!(request->dirname = malloc(sizeof(char) * strlen(optarg)))) {
+                if (!(request->dirname = malloc(strlen(optarg) + 1))) {
                     perror("Error: failed to allocate memory for arguments");
                     return errno;
                 }
@@ -184,11 +184,12 @@ int main(int argc, char* argv[]) {
                         // Salvo il comando
                         request->command = optopt;  // Non posso usare option perché è uguale a ':', uso optopt
                         // Salvo la lista di argomenti
-                        if (!(request->arguments = malloc(sizeof(char) * 4))) {
+                        char* default_n = "n=0";
+                        if (!(request->arguments = malloc(strlen(default_n) + 1))) {
                             perror("Error: failed to allocate memory for request arguments");
                             return errno;
                         }
-                        strcpy(request->arguments, "n=0");
+                        strcpy(request->arguments, default_n);
                         break;
                     default:
                         fprintf(stderr, "Parameter -%c takes an argument\n", optopt);
