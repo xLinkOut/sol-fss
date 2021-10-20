@@ -368,16 +368,17 @@ int icl_hash_get_n_files(icl_hash_t* ht, int N, void*** files){
     storage_file_t* current_file = NULL;
     for (int i = 0; i < ht->nbuckets && index < N; i++) {
         bucket = ht->buckets[i];
-        for (curr = bucket; curr != NULL && index < N;) {
+        for (curr = bucket; curr != NULL && index < N; curr = curr->next) {
             if (curr->key){
                 // Prendo il file corrente
                 current_file = (storage_file_t*) curr->data;
-                printf("%s %p %zu\n", current_file->name, current_file->contents, current_file->size);
+                //printf("%s %p %zu\n", current_file->name, current_file->contents, current_file->size);
+                // Salto i file vuoti
+                if(current_file->size == 0) continue;
                 storage_file_t* new_file = storage_file_create(current_file->name, current_file->contents, current_file->size);
                 (*read_files)[index] = new_file;
                 index++;
             }
-            curr = curr->next;
         }
     }
 
