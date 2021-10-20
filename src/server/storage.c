@@ -430,7 +430,7 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
     printf("Victims number: %d\n", *victims_no);
     if(*victims && *victims_no > 0)
         for(int i=0;i < *victims_no;i++)
-            printf("Victim n.%d: %s %zu %p\n", i, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
+            printf("Victim n.%d: %s %zu %p\n", i+1, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
 
     if(*victims_no == 0) free(*victims);
 
@@ -547,7 +547,7 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
     printf("Victims number: %d\n", *victims_no);
     if(*victims && *victims_no > 0)
         for(int i=0;i < *victims_no;i++)
-            printf("Victim n.%d: %s %zu %p\n", i, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
+            printf("Victim n.%d: %s %zu %p\n", i+1, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
 
     if(*victims_no == 0) free(*victims);
 

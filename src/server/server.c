@@ -302,7 +302,7 @@ static void* worker(void* args) {
                 if(victims_no > 0){
                     // Invio al client i file espulsi
                     for(int i=0;i<victims_no;i++){
-                        printf("Sending n.%d: %s %zd\n", i, victims[i]->name, victims[i]->size);
+                        printf("Sending n.%d: %s %zd\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
@@ -379,7 +379,7 @@ static void* worker(void* args) {
                 if(victims_no > 0){
                     // Invio al client i file espulsi
                     for(int i=0;i<victims_no;i++){
-                        printf("Sending n.%d: %s %zd\n", i, victims[i]->name, victims[i]->size);
+                        printf("Sending n.%d: %s %zd\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);

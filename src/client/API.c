@@ -344,7 +344,7 @@ int writeFile(const char* pathname, const char* dirname){
                 return -1;
             }
 
-            if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i, victim_size, victim_pathname);
+            if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i+1, victim_size, victim_pathname);
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
@@ -489,7 +489,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
                 return -1;
             }
 
-            if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i, victim_size, victim_pathname);
+            if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i+1, victim_size, victim_pathname);
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
