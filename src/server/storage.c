@@ -58,7 +58,7 @@ void storage_destroy(storage_t* storage) {
     // Controllo la validità degli argomenti
     if (!storage) return;
     // Cancello la hashmap
-    icl_hash_destroy(storage->files, NULL, NULL);  // TODO: free key-data
+    icl_hash_destroy(storage->files, NULL, storage_file_destroy);
     // Cancello il RWLock
     rwlock_destroy(storage->rwlock);
     // Libero la memoria dello storage
