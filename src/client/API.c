@@ -293,14 +293,15 @@ int readNFiles(int N, const char* dirname) {
 
     // files_no > 0
     if (VERBOSE) printf("%d file(s) have been read from the server\n", files_no);
-
+    
+    int i = 0;
     char* token = NULL;                  // Appoggio per strtok_r
     size_t file_size = 0;                // Dimensione del file da leggere
     void* file_contents = NULL;          // Contenuto del file da leggere
     char* strtok_status = NULL;          // Stato per strtok_r
     char file_pathname[MESSAGE_LENGTH];  // Pathname del file
 
-    for (int i = 0; i < files_no; i++) {
+    for (; i < files_no; i++) {
         // Ricevo dal server il nome e la dimensione del file
         memset(message_buffer, 0, MESSAGE_LENGTH);
         memset(file_pathname, 0, MESSAGE_LENGTH);

@@ -18,12 +18,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <utils.h>
 
 #define BITS_IN_int (sizeof(int) * CHAR_BIT)
 #define THREE_QUARTERS ((int)((BITS_IN_int * 3) / 4))
 #define ONE_EIGHTH ((int)(BITS_IN_int / 8))
 #define HIGH_BITS (~((unsigned int)(~0) >> ONE_EIGHTH))
-#define MBYTE 0.000001f
 
 /**
  * A simple string hash.
@@ -397,8 +397,10 @@ void icl_hash_print(icl_hash_t* ht){
         bucket = ht->buckets[i];
         for (curr = bucket; curr != NULL; curr = curr->next) {
             if (curr->key){
-                file = (storage_file_t*) curr->data,
-                fprintf(stdout, "[%d] (%5f Mb) %s\n", counter++, file->size * MBYTE, file->name);
+                file = (storage_file_t*) curr->data;
+                char* human_readable_size = calculate_size(file->size);
+                fprintf(stdout, "[%d] (%s) %s\n", counter++, human_readable_size , file->name);
+                free(human_readable_size);
             }
         }
     }

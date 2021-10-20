@@ -1,7 +1,9 @@
 // @author Luca Cirillo (545480)
 
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -86,4 +88,22 @@ int mkdir_p(const char* path) {
     }
 
     return 0;
+}
+
+char* calculate_size(uint64_t size) {
+    int i;
+    char* result = malloc(20);
+    uint64_t multiplier = exbibytes;
+
+    for (i = 0; i < DIM(sizes); i++, multiplier /= 1024) {
+        if (size < multiplier)
+            continue;
+        if (size % multiplier == 0)
+            sprintf(result, "%" PRIu64 " %s", size / multiplier, sizes[i]);
+        else
+            sprintf(result, "%.1f %s", (float)size / multiplier, sizes[i]);
+        return result;
+    }
+    strcpy(result, "0");
+    return result;
 }

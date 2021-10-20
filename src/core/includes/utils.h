@@ -3,10 +3,16 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
+#include <inttypes.h>
 #include <stdlib.h>
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
+#define DIM(x) (sizeof(x) / sizeof(*(x)))
+
+static const char* sizes[] = {"EiB", "PiB", "TiB", "GiB", "MiB", "KiB", "B"};
+static const uint64_t exbibytes = 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
 
 #define LOCK(lock)                               \
     if (pthread_mutex_lock(lock) != 0) {         \
@@ -38,9 +44,10 @@
         pthread_exit((void*)EXIT_FAILURE);            \
     }
 
+int mkdir_p(const char* path);
+int is_number(const char* arg, long* num);
 int readn(long fd, void* buf, size_t size);
 int writen(long fd, void* buf, size_t size);
-int is_number(const char* arg, long* num);
-int mkdir_p(const char* path);
+char* calculate_size(uint64_t size);
 
 #endif
