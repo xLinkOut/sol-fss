@@ -90,6 +90,9 @@ int mkdir_p(const char* path) {
     return 0;
 }
 
+static const char* sizes[] = {"EiB", "PiB", "TiB", "GiB", "MiB", "KiB", "B"};
+static const uint64_t exbibytes = 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+
 char* calculate_size(uint64_t size) {
     int i;
     char* result = malloc(20);
