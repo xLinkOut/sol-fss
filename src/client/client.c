@@ -43,14 +43,15 @@ int main(int argc, char* argv[]) {
     // Nella optstring, il primo ':' serve a distinguere il caso di carattere sconosciuto, che ritorna '?',
     // dal caso di mancato argomento, che invece ritorna proprio ':'.
     // Il parametro -R, che prevede un argomento opzionale, verrà gestito nel caso ':'
-    
+
+    int EXIT_CODE = EXIT_SUCCESS;           // Codice di uscita in caso di errore
     char* SOCKET_PATH = NULL;               // Percorso al socket file del server
+    Request_t* request = NULL;              // Descrizione di una singola richiesta
     Queue_t* request_queue = queue_init();  // Coda delle richiesta
     if (!request_queue) {
         fprintf(stderr, "Error: failed to create request queue\n");
         return errno;
     }
-    Request_t* request = NULL;  // Descrizione di una singola richiesta
 
     int option;  // Carattere del parametro appena letto da getopt
     while ((option = getopt(argc, argv, ":hpf:w:W:D:r:R:d:t:l:u:c:")) != -1) {
@@ -60,14 +61,15 @@ int main(int argc, char* argv[]) {
                 // Controllo che non sia già stato specificato
                 if (SOCKET_PATH) {
                     fprintf(stderr, "Error: -f parameter can only be specified once\n");
-                    return EINVAL;
+                    EXIT_CODE = EINVAL;
+                    goto free_and_exit;
                 }
 
                 // Salvo il path del socket
-                //SOCKET_PATH = strdup(optarg);
                 if (!(SOCKET_PATH = malloc(strlen(optarg) + 1))) {
                     perror("Error: failed to allocate memory for SOCKET_PATH");
-                    return errno;
+                    EXIT_CODE = errno;
+                    goto free_and_exit;
                 }
                 strcpy(SOCKET_PATH, optarg);
 
@@ -87,14 +89,16 @@ int main(int argc, char* argv[]) {
                 // Creo una nuova richiesta
                 if (!(request = queue_new_request())) {
                     fprintf(stderr, "Error: failed to allocate memory for a new request");
-                    return errno;
+                    EXIT_CODE = errno;
+                    goto free_and_exit;
                 }
                 // Salvo il comando
                 request->command = option;
                 // Salvo la lista di argomenti
                 if (!(request->arguments = malloc(strlen(optarg) + 1))) {
                     perror("Error: failed to allocate memory for request arguments");
-                    return errno;
+                    EXIT_CODE = errno;
+                    goto free_and_exit;
                 }
                 strcpy(request->arguments, optarg);
                 break;
@@ -104,35 +108,42 @@ int main(int argc, char* argv[]) {
                 // Controllo che non sia stato specificato congiuntamente ad una richiesta
                 if (!request) {
                     fprintf(stderr, "Error: no request to set this parameter on\n");
-                    return EINVAL;
+                    EXIT_CODE = EINVAL;
+                    goto free_and_exit;
                 }
                 // Controllo che non sia stato specificato con comandi che non siano 'w' oppure 'W'
                 if (request->command != 'w' && request->command != 'W') {
                     fprintf(stderr, "Error: -D must be used in conjunction with -w or -W\n");
-                    return EINVAL;
+                    EXIT_CODE = EINVAL;
+                    goto free_and_exit;
                 }
                 // Quindi, alloco lo spazio per salvare l'argomento
                 if (!(request->dirname = malloc(strlen(optarg) + 1))) {
                     perror("Error: failed to allocate memory for request dirname");
-                    return errno;
+                    EXIT_CODE = errno;
+                    goto free_and_exit;
                 }
                 strcpy(request->dirname, optarg);
                 break;
+
             case 'd':  // Relativa ai comandi 'r' e 'R'
                 // Controllo che non sia stato specificato congiuntamente ad una richiesta
                 if (!request) {
                     fprintf(stderr, "Error: no request to set this parameter on\n");
-                    return EINVAL;
+                    EXIT_CODE = EINVAL;
+                    goto free_and_exit;
                 }
                 // Controllo che non sia stato specificato con comandi che non siano 'r' oppure 'R'
                 if (request->command != 'r' && request->command != 'R') {
                     fprintf(stderr, "Error: -d must be used in conjunction with -r or -R\n");
-                    return EINVAL;
+                    EXIT_CODE = EINVAL;
+                    goto free_and_exit;
                 }
                 // Quindi, alloco lo spazio per salvare l'argomento
                 if (!(request->dirname = malloc(strlen(optarg) + 1))) {
                     perror("Error: failed to allocate memory for arguments");
-                    return errno;
+                    EXIT_CODE = errno;
+                    goto free_and_exit;
                 }
                 strcpy(request->dirname, optarg);
                 break;
@@ -142,13 +153,15 @@ int main(int argc, char* argv[]) {
                 // Controllo che non sia stato specificato congiuntamente ad una richiesta
                 if (!request) {
                     fprintf(stderr, "Error: no request to set this parameter on\n");
-                    return EINVAL;
+                    EXIT_CODE = EINVAL;
+                    goto free_and_exit;
                 }
                 // Controllo che sia effettivamente un numero valido
                 // TODO: controllo che sia un numero >= 0
                 if (!is_number(optarg, &request->time)) {
                     fprintf(stderr, "Error: time is invalid\n");
-                    return EINVAL;
+                    EXIT_CODE = EINVAL;
+                    goto free_and_exit;
                 }
                 break;
 
@@ -157,7 +170,8 @@ int main(int argc, char* argv[]) {
                 // Controllo che non sia già stato specificato
                 if (VERBOSE) {
                     fprintf(stderr, "Error: -p parameter can only be specified once\n");
-                    return EINVAL;
+                    EXIT_CODE = EINVAL;
+                    goto free_and_exit;
                 }
                 VERBOSE = true;
                 break;
@@ -166,8 +180,8 @@ int main(int argc, char* argv[]) {
             case 'h':
                 // Stampo l'help ed esco
                 print_help();
-                return EXIT_SUCCESS;
-                break;
+                EXIT_CODE = EXIT_SUCCESS;
+                goto free_and_exit;
 
             // * Argomento non specificato
             case ':':
@@ -179,7 +193,8 @@ int main(int argc, char* argv[]) {
                         // Creo una nuova richiesta
                         if (!(request = queue_new_request())) {
                             fprintf(stderr, "Error: failed to allocate memory for a new request");
-                            return errno;
+                            EXIT_CODE = errno;
+                            goto free_and_exit;
                         }
                         // Salvo il comando
                         request->command = optopt;  // Non posso usare option perché è uguale a ':', uso optopt
@@ -187,20 +202,23 @@ int main(int argc, char* argv[]) {
                         char* default_n = "n=0";
                         if (!(request->arguments = malloc(strlen(default_n) + 1))) {
                             perror("Error: failed to allocate memory for request arguments");
-                            return errno;
+                            EXIT_CODE = errno;
+                            goto free_and_exit;
                         }
                         strcpy(request->arguments, default_n);
                         break;
                     default:
                         fprintf(stderr, "Parameter -%c takes an argument\n", optopt);
-                        return EINVAL;
+                        EXIT_CODE = EINVAL;
+                        goto free_and_exit;
                 }
                 break;
 
             // * Parametro sconosciuto
             case '?':
                 printf("Unknown parameter '%c'\n", optopt);
-                return EINVAL;
+                EXIT_CODE = EINVAL;
+                goto free_and_exit;
         }
     }
 
@@ -217,7 +235,8 @@ int main(int argc, char* argv[]) {
     // Instauro una connessione con il server
     if (openConnection(SOCKET_PATH, msec, abstime) == -1) {
         perror("Error: failed to initiate socket connection");
-        return errno;
+        EXIT_CODE = errno;
+        goto free_and_exit;
     }
     if (VERBOSE) printf("Connection established correctly to '%s'\n", SOCKET_PATH);
 
@@ -366,13 +385,17 @@ int main(int argc, char* argv[]) {
     // * Chiusura della connessione con il server
     if (closeConnection(SOCKET_PATH) == -1) {
         perror("Error: failed to close socket connection");
-        return errno;
+        EXIT_CODE = errno;
+        goto free_and_exit;
     }
     if (VERBOSE) printf("Connection on '%s' closed\n", SOCKET_PATH);
 
-    // Libero la memoria
-    free(SOCKET_PATH);
-    queue_destroy(request_queue);
+free_and_exit:  // Salto qui solo in caso di errore, per liberare la memoria prima di uscire
+
+    // Libero la memoria ed esco
+    if (SOCKET_PATH) free(SOCKET_PATH);
+    if (request) queue_destroy_request(request);
+    if (request_queue) queue_destroy(request_queue);
 
     return EXIT_SUCCESS;
 }
