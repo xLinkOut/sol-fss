@@ -646,12 +646,10 @@ int storage_lock_file(storage_t* storage, const char* pathname, int client){
 
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, (void*) pathname);
-    
-    // Rilascio l'accesso in lettura sullo storage
-    rwlock_done_read(storage->rwlock);
 
     // Controllo che il file esista
     if (!file) {
+        rwlock_done_read(storage->rwlock);
         errno = ENOENT;
         return -1;
     }
@@ -659,11 +657,21 @@ int storage_lock_file(storage_t* storage, const char* pathname, int client){
     // Acquisisco l'accesso in lettura sul file
     rwlock_start_read(file->rwlock);
 
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
+
     // Se il file è gia aperto in scrittura per il client che ha effettuato la richiesta, ritorno immediatamente
-    if(file->writer == client) return 0;
+    if(file->writer == client){
+        rwlock_done_read(file->rwlock);
+        return 0;
+    }
 
     // Se il file non è stato precedentemente aperto, almeno in lettura, dal client, non posso aprirlo in scrittura
-    if(!linked_list_find(file->readers, client)) return -1;
+    if(!linked_list_find(file->readers, client)){
+        rwlock_done_read(file->rwlock);
+        errno = ENOLCK;
+        return -1;
+    }
 
     // Se il file non è stato aperto in scrittura da nessun client (= non è bloccato in scrittura)
     if(file->writer == 0){
