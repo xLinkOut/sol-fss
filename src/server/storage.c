@@ -198,6 +198,14 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         // Acquisisco l'accesso in lettura sul file
         rwlock_start_read(file->rwlock);
 
+        // Controllo che il file non sia già stato aperto dal client
+        //  in lettura, oppure anche in scrittura se O_LOCK è stato specificato
+        if((linked_list_find(file->readers, client) && !lock_flag) || (file->writer == client && lock_flag)){
+            rwlock_done_read(file->rwlock);
+            rwlock_done_read(storage->rwlock);
+            return 0;
+        }
+
         // Controllo che il file non sia aperto in scrittura (locked) da un altro client
         if (file->writer != 0 && file->writer != client) {
             rwlock_done_read(file->rwlock);
@@ -207,9 +215,9 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         }
 
         // Controllo che il client non abbia già aperto il file (almeno in lettura)
-        // Qualora fosse già stato aperto in lettura, l'accesso in scrittura deve essere 
-        // richiesto dal client tramite la API lockFile
-        if (linked_list_find(file->readers, client)) {
+        // Qualora fosse già stato aperto in lettura e venisse chiesto l'accesso in scrittura,
+        //  questo deve essere richiesto dal client tramite la API lockFile
+        if (linked_list_find(file->readers, client) && lock_flag) {
             rwlock_done_read(file->rwlock);
             rwlock_done_read(storage->rwlock);
             errno = EEXIST;
@@ -263,7 +271,8 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
         // Creo un nuovo file vuoto
         file = storage_file_create(pathname, NULL, 0);
 
-        // * Non è necessario richiedere l'accesso in scrittura sul file perché non può essere ancora utilizzato da altri client
+        // * Non è necessario richiedere l'accesso in scrittura sul file 
+        //    perché non può essere ancora utilizzato da altri client
 
         // Lo apro in lettura per il client
         if(!linked_list_insert(file->readers, client)){
