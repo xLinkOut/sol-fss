@@ -1,6 +1,11 @@
 # Directories
 .vscode/
 
+# Contents of 'build' folder
+build/*
+# Except the 'tests' folder
+!build/tests/
+
 # Files
 # Log files
 *.log
