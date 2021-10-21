@@ -4,12 +4,13 @@
 
 CC = gcc
 LIBS = -pthread
-CFLAGS = -g -Wall #-std=c99
+CFLAGS = -g -Wall #-std=c99 -D_POSIX_C_SOURCE=200112L
 
 BUILD_DIR  = ./build
 CORE_DIR   = ./src/core
 CLIENT_DIR = ./src/client
 SERVER_DIR = ./src/server
+TESTS_DIR  = ./build/tests
 
 CORE_INCLUDES   = -I ./src/core/includes
 CLIENT_INCLUDES = -I ./src/client/includes
@@ -81,7 +82,9 @@ clean cleanall:
 
 # == TESTS
 
-test1:
+test1: client server
+	@chmod +x $(TESTS_DIR)/test-1.sh
+	$(TESTS_DIR)/test-1.sh
 
 test2:
 
