@@ -716,17 +716,18 @@ int storage_unlock_file(storage_t* storage, const char* pathname, int client){
     // Recupero il file dallo storage
     storage_file_t* file = icl_hash_find(storage->files, (void*) pathname);
     
-    // Rilascio l'accesso in lettura sullo storage
-    rwlock_done_read(storage->rwlock);
-    
     // Controllo che il file esista
     if (!file) {
+        rwlock_done_read(storage->rwlock);
         errno = ENOENT;
         return -1;
     }
 
     // Acquisisco l'accesso in lettura sul file
     rwlock_start_read(file->rwlock);
+
+    // Rilascio l'accesso in lettura sullo storage
+    rwlock_done_read(storage->rwlock);
 
     if(file->writer == 0 || file->writer != client){
         // Il file non è attualmente lockato in scrittura, oppure
