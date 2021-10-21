@@ -691,15 +691,11 @@ int storage_lock_file(storage_t* storage, const char* pathname, int client){
         // Imposto il lock in scrittura sul file per il client 
         file->writer = client;
     }else{
-        // Se il file è lockato da un altro client, aspetto che venga rilasciato
-        // e solo successivamente acquisisco la lock
-        // ! 
+        // Se il file è aperto in scrittura da un altro client, ritorno errore
         // Rilascio l'accesso in lettura sul file
         rwlock_done_read(file->rwlock);
-        // Acquisisco l'accesso in scrittura sul file
-        rwlock_start_write(file->rwlock);
-        // TODO: variabile di condizione sul lock su cui aspettare
-        file->writer = client;
+        errno = EACCES;
+        return -1;
     }
 
     // Aggioro le statistiche del file
