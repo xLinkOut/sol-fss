@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # @author Luca Cirillo (545480)
 
 CC = gcc
@@ -90,7 +89,11 @@ test1: client server
 	$(TESTS_DIR)/test-1.sh
 	pkill -HUP -f $(BUILD_DIR)/server
 
-test2:
+test2: client server
+	$(BUILD_DIR)/server $(TESTS_DIR)/config-2.txt &
+	@chmod +x $(TESTS_DIR)/test-2.sh
+	$(TESTS_DIR)/test-2.sh
+	pkill -HUP -f $(BUILD_DIR)/server
 
 test3:
 
