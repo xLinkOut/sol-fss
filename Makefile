@@ -4,7 +4,7 @@
 
 CC = gcc
 LIBS = -pthread
-CFLAGS = -g -Wall #-std=c99 -D_POSIX_C_SOURCE=200112L
+CFLAGS = -g -Wall -std=c99 -D_POSIX_C_SOURCE=200112L
 
 BUILD_DIR  = ./build
 CORE_DIR   = ./src/core
@@ -75,10 +75,12 @@ utils.o:
 
 # == CLEAN
 
+# Objects, Socket, Logs, Dummys
 clean cleanall:
 	rm -f $(BUILD_DIR)/*.o
 	rm -f $(BUILD_DIR)/*.sk
 	rm -f $(BUILD_DIR)/*.log
+	rm -rf $(TESTS_DIR)/dummy
 
 # == TESTS
 
