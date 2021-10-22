@@ -127,7 +127,7 @@ static void* worker(void* args) {
     char response[MESSAGE_LENGTH];  // Messaggio risposta del server
     char pathname[MESSAGE_LENGTH];  // Quasi ogni API call prevede un pathname
     void* contents = NULL;
-
+    int thread_id = (int)pthread_self();
     // readNFiles
     int N = 0;
     storage_file_t** files_read = NULL;
@@ -208,7 +208,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "Storage open file with code ");
+                log_event("INFO", "[%d] OPEN: %s %d => %c", thread_id, pathname, flags, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case READ: // ! readFile: READ <str:pathname>
@@ -258,7 +258,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "Storage read file with code ");
+                log_event("INFO", "[%d] READ: %s %zu => %c", thread_id, pathname, size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case READN:  // ! readNFiles: READN <int:n>
@@ -303,12 +303,14 @@ static void* worker(void* args) {
                             break;
                         }
 
+                        log_event("INFO", "[%d] READN: %d %s %zd => 'O'", thread_id, i+1, files_read[i]->name, files_read[i]->size);
+
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*)files_read[i]);
                     }
                 }
 
-                log_event("INFO", "Storage read n file with code ");
+                log_event("INFO", "[%d] READN: %d => %c", thread_id, N, api_exit_code >= 0 ? 'O' : 'X');
                 break;
 
             case WRITE: // ! writeFile: WRITE <str:pathname> <int:file_size>
@@ -353,11 +355,12 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", victims_no);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failedaaa");
+                    perror("Error: writen failed");
                     break;
                 }
 
                 if(victims_no > 0){
+                    log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
                     for(int i=0;i<victims_no;i++){
                         printf("Sending n.%d: %s %zd\n", i+1, victims[i]->name, victims[i]->size);
@@ -375,6 +378,8 @@ static void* worker(void* args) {
                             break;
                         }
 
+                        log_event("INFO", "[%d] VICTIM: %s %zu => %c", thread_id, victims[i]->name, victims[i]->size);
+
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*) victims[i]);
                     }
@@ -388,7 +393,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "Storage write file with code ");
+                log_event("INFO", "[%d] WRITE: %s %zu => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case APPEND: // ! appendToFile: APPEND <str:pathname> <int:size>
@@ -437,11 +442,12 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", victims_no);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failedaaa");
+                    perror("Error: writen failed");
                     break;
                 }
 
                 if(victims_no > 0){
+                    log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
                     for(int i=0;i<victims_no;i++){
                         printf("Sending n.%d: %s %zd\n", i+1, victims[i]->name, victims[i]->size);
@@ -458,7 +464,8 @@ static void* worker(void* args) {
                             perror("Error: writen failed");
                             break;
                         }
-
+                        
+                        log_event("INFO", "[%d] VICTIM: %s %zu => %c", thread_id, victims[i]->name, victims[i]->size);
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*) victims[i]);
                     }
@@ -472,7 +479,7 @@ static void* worker(void* args) {
                     break;
                 }
                 
-                log_event("INFO", "Storage append file with code ");
+                log_event("INFO", "[%d] APPEND: %s %zu => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case LOCK: // ! lockFile: LOCK <str:pathname>
@@ -497,7 +504,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "Storage lock file with code ");
+                log_event("INFO", "[%d] LOCK: %s => %c", thread_id, pathname, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case UNLOCK: // ! unlockFile: UNLOCK <str:pathname>
@@ -522,7 +529,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "Storage unlock file with code ");
+                log_event("INFO", "[%d] UNLOCK: %s => %c", thread_id, pathname, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case CLOSE:  // * closeFile: CLOSE <str:pathname>
@@ -546,7 +553,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "Storage close file with code ");
+                log_event("INFO", "[%d] CLOSE: %s => %c", thread_id, pathname, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case REMOVE: // ! removeFile: REMOVE <str:pathname>
@@ -570,7 +577,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "Storage remove file with code ");
+                log_event("INFO", "[%d] REMOVE: %s => %c", thread_id, pathname, api_exit_code == 0 ? 'O' : 'X');
                 break;
                 
             case DISCONNECT:  // * closeConnection
@@ -582,11 +589,12 @@ static void* worker(void* args) {
                     perror("Error: writen failed");
                     break;
                 }
-                log_event("INFO", "Client left");
+                log_event("INFO", "[%d] Client %d has left", thread_id, fd_ready);
                 break;
 
             default:
                 fprintf(stderr, "Error: unknown command %d\n", command);
+                log_event("INFO", "[%d] Client %d sent an unknown command: %d", thread_id, fd_ready, command);
                 break;
         }
 
@@ -978,7 +986,6 @@ int main(int argc, char* argv[]) {
                     FD_CLR(fd, &set);
                     //if(fd == fd_num) fd_num--;
                     //log_event("INFO", "Client %d has added a new task to the processing queue", fd);
-                    //printf("Aggiunto %d nella queue\n", fd);
                 }
             }
         }
