@@ -20,7 +20,6 @@
 
 // TODO: liberare la memoria prima di uscire in caso di errore
 // TODO: routine di cleanup per la chiusura su errore del server
-// TODO: ResponseCode appropriati ad ogni API call
 
 // File di log
 FILE* log_file = NULL;

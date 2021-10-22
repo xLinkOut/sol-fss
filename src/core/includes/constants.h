@@ -40,8 +40,4 @@ typedef enum RequestCode {
     DISCONNECT  // closeConnection
 } request_code;
 
-typedef enum ResponseCode {
-    SUCCESS  // Operazione eseguita con successo
-} response_code;
-
 #endif

@@ -126,22 +126,19 @@ int openFile(const char* pathname, int flags){
     }
 
     // Interpreto (il codice del)la risposta ricevuta
-    response_code status;
+    int status;
     if(sscanf(message_buffer, "%d", &status) != 1){
         errno = EBADMSG;
         return -1;
     }
 
-    switch(status){
-        case SUCCESS:
-            if (VERBOSE) printf("File opened successfully!\n");
-            return 0;
-        
-        default:
-            if (VERBOSE) printf("Something went wrong!\n");
+    if(status > 0){
+        if (VERBOSE) printf("File opened successfully!\n");
+        return status;
     }
 
-    return -1;
+    if (VERBOSE) printf("Something went wrong!\n");
+    return status;
 }
 
 int readFile(const char* pathname, void** buf, size_t* size, const char* dirname){
@@ -240,22 +237,19 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
     }
 
     // Interpreto (il codice del)la risposta ricevuta
-    response_code status;
+    int status;
     if(sscanf(message_buffer, "%d", &status) != 1){
         errno = EBADMSG;
         return -1;
     }
 
-    switch(status){
-        case SUCCESS:
-            if (VERBOSE) printf("Successfully read %zd bytes!\n", *size);
-            return 0;
-        
-        default:
-            if (VERBOSE) printf("Something went wrong!\n");
+    if(status > 0){
+        if (VERBOSE) printf("Successfully read %zd bytes!\n", *size);
+        return 0;
     }
-
-    return -1;
+        
+    if (VERBOSE) printf("Something went wrong!\n");
+    return status;
 }
 
 int readNFiles(int N, const char* dirname) {
@@ -544,22 +538,19 @@ int writeFile(const char* pathname, const char* dirname){
     }
 
     // Interpreto (il codice del)la risposta ricevuta
-    response_code status;
+    int status;
     if(sscanf(message_buffer, "%d", &status) != 1){
         errno = EBADMSG;
         return -1;
     }
-
-    switch(status){
-        case SUCCESS:
-           if (VERBOSE) printf("%lld bytes written successfully!\n", file_stat.st_size);
-            return 0;
-
-        default:
-            if(VERBOSE) printf("Something went wrong!\n");
+    
+    if(status > 0){
+        if (VERBOSE) printf("%lld bytes written successfully!\n", file_stat.st_size);
+        return status;
     }
-
-    return -1;
+        
+    if (VERBOSE) printf("Something went wrong!\n");
+    return status;
 }
 
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname){
@@ -683,23 +674,19 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     }
 
     // Interpreto (il codice del)la risposta ricevuta
-    response_code status;
+    int status;
     if(sscanf(message_buffer, "%d", &status) != 1){
         errno = EBADMSG;
         return -1;
     }
 
-    switch(status){
-        case SUCCESS:
-           if (VERBOSE) printf("%zd bytes added successfully!\n", size);
-            return 0;
-
-        default:
-            if(VERBOSE) printf("Something went wrong!\n");
+    if (status > 0) {
+        if (VERBOSE) printf("%zd bytes added successfully!\n", size);
+        return status;
     }
 
-    return -1;
-
+    if (VERBOSE) printf("Something went wrong!\n");
+    return status;
 }
 
 int lockFile(const char* pathname){
@@ -731,21 +718,19 @@ int lockFile(const char* pathname){
     }
 
     // Interpreto (il codice del)la risposta ricevuta
-    response_code status;
+    int status;
     if(sscanf(message_buffer, "%d", &status) != 1){
         errno = EBADMSG;
         return -1;
     }
 
-    switch(status){
-        case SUCCESS:
-           if (VERBOSE) printf("File locked successfully!\n");
-            return 0;
-
-        default:
-            if(VERBOSE) printf("Something went wrong!\n");
+    if (status > 0) {
+        if (VERBOSE) printf("File locked successfully!\n");
+        return status;
     }
-    return -1;
+
+    if (VERBOSE) printf("Something went wrong!\n");
+    return status;
 }
 
 int unlockFile(const char* pathname){
@@ -777,22 +762,19 @@ int unlockFile(const char* pathname){
     }
 
     // Interpreto (il codice del)la risposta ricevuta
-    response_code status;
+    int status;
     if(sscanf(message_buffer, "%d", &status) != 1){
         errno = EBADMSG;
         return -1;
     }
 
-    switch(status){
-        case SUCCESS:
-           if (VERBOSE) printf("File unlocked successfully!\n");
-            return 0;
-
-        default:
-            if(VERBOSE) printf("Something went wrong!\n");
+    if (status > 0) {
+        if (VERBOSE) printf("File unlocked successfully!\n");
+        return status;
     }
 
-    return -1;
+    if (VERBOSE) printf("Something went wrong!\n");
+    return status;
 }
 
 int closeFile(const char* pathname){
@@ -824,21 +806,19 @@ int closeFile(const char* pathname){
     }
 
     // Interpreto (il codice del)la risposta ricevuta
-    response_code status;
+    int status;
     if(sscanf(message_buffer, "%d", &status) != 1){
         errno = EBADMSG;
         return -1;
     }
 
-    switch(status){
-        case SUCCESS:
-            if (VERBOSE) printf("File closed successfully!\n");
-            return 0;
-        
-        default:
-            if (VERBOSE) printf("Something went wrong!\n");
+    if (status > 0) {
+        if (VERBOSE) printf("File closed successfully!\n");
+        return status;
     }
-    return -1;
+
+    if (VERBOSE) printf("Something went wrong!\n");
+    return status;
 }
 
 int removeFile(const char* pathname){
@@ -870,20 +850,17 @@ int removeFile(const char* pathname){
     }
 
     // Interpreto (il codice del)la risposta ricevuta
-    response_code status;
+    int status;
     if(sscanf(message_buffer, "%d", &status) != 1){
         errno = EBADMSG;
         return -1;
     }
 
-    switch(status){
-        case SUCCESS:
-            if (VERBOSE) printf("File removed successfully!\n");
-            return 0;
-        
-        default:
-            if (VERBOSE) printf("Something went wrong!\n");
+    if (status > 0) {
+        if (VERBOSE) printf("File removed successfully!\n");
+        return status;
     }
 
-    return -1;
+    if (VERBOSE) printf("Something went wrong!\n");
+    return status;
 }
