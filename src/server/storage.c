@@ -85,7 +85,7 @@ storage_file_t* storage_file_create(const char* name, const void* contents, size
     strncpy(file->name, name, length);
 
     // Salvo il contenuto del file
-    if (contents && size != 0) {
+    if (contents && size > 0) {
         if ((file->contents = malloc(size)) == NULL) {
             free(file->name);
             free(file);
@@ -150,16 +150,16 @@ void storage_file_print(storage_file_t* file) {
     if (!file) return;
     printf("%s (%zd Bytes)\nWriter: [%d], Readers: ", file->name, file->size, file->writer);
     linked_list_print(file->readers);
-    printf("Tempo di creazione: %ld\n", file->creation_time);
-    printf("Ultimo utilizzo: %ld\n", file->last_use_time);
-    printf("Numero di accessi: %u\n", file->frequency);
+    printf("Creation time: %ld\n", file->creation_time);
+    printf("Last use time: %ld\n", file->last_use_time);
+    printf("Frequency: %u\n", file->frequency);
 }
 
 // ! APIs
 
 int storage_open_file(storage_t* storage, const char* pathname, int flags, int client) {
     // Controllo la validità degli argomenti
-    if (!storage || !pathname) {
+    if (!storage || !pathname || flags < 0) {
         errno = EINVAL;
         return -1;
     }
@@ -411,7 +411,7 @@ int storage_read_n_files(storage_t* storage, int N, storage_file_t*** read_files
 
 int storage_write_file(storage_t* storage, const char* pathname, void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client){
     // Controllo la validità degli argomenti
-    if (!storage || !pathname || !contents || size <= 0) {
+    if (!storage || !pathname || !contents || size == 0 || !victims_no || !victims) {
         errno = EINVAL;
         return -1;
     }
@@ -530,7 +530,7 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
 
 int storage_append_to_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client){
     // Controllo la validità degli argomenti
-    if (!storage || !pathname || !contents || size <= 0) {
+    if (!storage || !pathname || !contents || size == 0 || !victims_no || !victims) {
         errno = EINVAL;
         return -1;
     }

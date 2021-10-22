@@ -52,6 +52,7 @@ Queue_t* queue_init() {
 }
 
 void queue_destroy(Queue_t* queue) {
+    if (!queue) return;
     // Scorro la coda per cancellare tutti i nodi
     while (queue->head != queue->tail) {
         Node_t* node = (Node_t*)queue->head;

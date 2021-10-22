@@ -69,6 +69,12 @@ int closeConnection(const char* sockname){
         return -1;
     }
 
+    // Controllo che il client sia connesso al server
+    if (client_socket == -1) {
+        errno = ENOTCONN;
+        return -1;
+    }
+
     // Mando al server un messaggio di uscita
     // Svuoto il buffer di comunicazione
     memset(message_buffer, 0, MESSAGE_LENGTH);
@@ -93,7 +99,7 @@ int closeConnection(const char* sockname){
 
 int openFile(const char* pathname, int flags){
     // Controllo la validità degli argomenti
-    if(!pathname){
+    if(!pathname || flags < 0){
         errno = EINVAL;
         return -1;
     }
@@ -558,7 +564,7 @@ int writeFile(const char* pathname, const char* dirname){
 
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname){
     // Controllo la validità degli argomenti
-    if(!pathname){
+    if(!pathname || !buf || size == 0){
         errno = EINVAL;
         return -1;
     }
