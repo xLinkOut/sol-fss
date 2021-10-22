@@ -83,7 +83,7 @@ static void* signals_handler(void* sigset) {
         case SIGINT:
         case SIGQUIT:
             force_stop = 1;
-            log_event("INFO", "SIGINT or SIGQUIT received");
+            log_event("WARN", "SIGINT or SIGQUIT received");
             printf("Info: SIGINT or SIGQUIT received\n");
             break;
 
@@ -96,7 +96,7 @@ static void* signals_handler(void* sigset) {
         */
         case SIGHUP:
             stop = 1;
-            log_event("INFO", "SIGHUP received");
+            log_event("WARN", "SIGHUP received");
             printf("Info: SIGHUP received\n");
             break;
 
@@ -180,7 +180,7 @@ static void* worker(void* args) {
 
         // * Eseguo le operazioni relative al comando ricevuto
         switch (command) {
-            case OPEN:  // * openFile: OPEN <str:pathname> <int:flags>
+            case OPEN:  // ! openFile: OPEN <str:pathname> <int:flags>
                 // Parso il pathname dalla richiesta
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
@@ -532,7 +532,7 @@ static void* worker(void* args) {
                 log_event("INFO", "[%d] UNLOCK: %s => %c", thread_id, pathname, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
-            case CLOSE:  // * closeFile: CLOSE <str:pathname>
+            case CLOSE:  // ! closeFile: CLOSE <str:pathname>
                 // Parso il pathname dalla richiesta
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
@@ -580,7 +580,7 @@ static void* worker(void* args) {
                 log_event("INFO", "[%d] REMOVE: %s => %c", thread_id, pathname, api_exit_code == 0 ? 'O' : 'X');
                 break;
                 
-            case DISCONNECT:  // * closeConnection
+            case DISCONNECT:  // ! closeConnection
                 // Un client ha richiesto la chiusura della connessione
                 // Lo comunico al thread dispatcher tramite la pipe
                 memset(response, 0, MESSAGE_LENGTH);
@@ -589,12 +589,12 @@ static void* worker(void* args) {
                     perror("Error: writen failed");
                     break;
                 }
-                log_event("INFO", "[%d] Client %d has left", thread_id, fd_ready);
+                log_event("INFO", "[%d] CLIENT: %d has left", thread_id, fd_ready);
                 break;
 
             default:
                 fprintf(stderr, "Error: unknown command %d\n", command);
-                log_event("INFO", "[%d] Client %d sent an unknown command: %d", thread_id, fd_ready, command);
+                log_event("INFO", "[%d] CLIENT: %d sent an unknown command: %d", thread_id, fd_ready, command);
                 break;
         }
 
@@ -956,7 +956,7 @@ int main(int argc, char* argv[]) {
                     // Aggiorno il contatore dei clients attivi
                     active_clients++;
                     //printf("Active clients: %d\n", active_clients);
-                    log_event("INFO", "Accepted incoming connection from client %d", client_socket);
+                    log_event("INFO", "[000000000] CLIENT: %d connected", client_socket);
                     //printf("Info: accepted incoming connection on %d\n", client_socket);
 
                 } else if (fd == pipe_workers[0]) {
