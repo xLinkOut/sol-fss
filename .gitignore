@@ -3,6 +3,8 @@
 
 # Contents of 'build' folder
 build/*
+# Contents of 'dummy' folder
+build/tests/dummy/*
 # Except the 'tests' folder
 !build/tests/
 
