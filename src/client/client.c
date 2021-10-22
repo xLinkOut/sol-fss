@@ -280,7 +280,7 @@ int main(int argc, char* argv[]) {
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
-                    if (openFile(filename, 0) == -1) { // TODO: O_READ
+                    if (openFile(filename, O_READ) == -1) {
                         perror("Error: can't open the file, skip it");
                         // Non avendo aperto correttamente il file, evito di proseguire
                         filename = strtok_r(NULL, ",", &strtok_status);
@@ -328,7 +328,7 @@ int main(int argc, char* argv[]) {
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
                     // Si suppone che il file sia già stato aperto in lettura dal client
-                    openFile(filename, 0);
+                    openFile(filename, O_READ);
                     if (lockFile(filename) == -1) {
                         perror("Error: cannot lock file");
                     }

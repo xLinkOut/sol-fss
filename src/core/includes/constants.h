@@ -5,11 +5,10 @@
 #define _CONSTANTS_H_
 
 // Flags per la openFile
+#define O_READ 0
 #define O_CREATE 1
 #define O_LOCK 2
 // Gestione di flags
-#define SET_FLAG(mask, flag) mask |= flag
-#define RESET_MASK(mask) mask = 0
 #define IS_O_CREATE(mask) (mask & 1)
 #define IS_O_LOCK(mask) ((mask >> 1) & 1)
 
