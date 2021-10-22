@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <utils.h>
+#include <constants.h>
 
 int readn(long fd, void* buf, size_t size) {
     size_t left = size;
@@ -60,7 +61,7 @@ int is_number(const char* arg, long* num) {
 
 // * Crea ricorsivamente la struttura di cartella definita in <path>
 int mkdir_p(const char* path) {
-    char abs_path[4096];  // TODO: PATH_MAX
+    char abs_path[PATH_MAX];
     const size_t length = strlen(path);
     char* p = NULL;
 

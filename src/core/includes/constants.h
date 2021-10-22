@@ -14,6 +14,7 @@
 
 // Lunghezza massima di un qualsiasi messaggio scambiato tra client e server
 #define PIPE_LEN 16
+#define PATH_MAX 4096
 #define CLIENT_LEFT 0
 #define BUFFER_SIZE 1024
 #define MEGABYTES 1048576  // 1024 * 1024

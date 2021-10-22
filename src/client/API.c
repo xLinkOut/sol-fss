@@ -207,15 +207,15 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
         // Creo il path completo per il salvataggio del file
         // Calcolo la lunghezza del path indicato da dirname
         size_t dirname_length = strlen(dirname);
-        char abs_path[4096]; // => dirname/pathname, // TODO: MAX_PATH in linux/limits.h
-        memset(abs_path, 0, 4096);
+        char abs_path[PATH_MAX]; // => dirname/pathname, // TODO: MAX_PATH in linux/limits.h
+        memset(abs_path, 0, PATH_MAX);
         
         // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
         //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
         // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
         int slash = dirname[dirname_length-1] == '/' || pathname[0] == '/';
         // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
-        snprintf(abs_path, 4096, slash ? "%s%s" : "%s/%s", dirname, pathname);
+        snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, pathname);
 
         // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
         //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
@@ -347,15 +347,15 @@ int readNFiles(int N, const char* dirname) {
             // Creo il path completo per il salvataggio del file
             // Calcolo la lunghezza del path indicato da dirname
             size_t dirname_length = strlen(dirname);
-            char abs_path[4096];  // => dirname/file_pathname, // TODO: MAX_PATH in linux/limits.h
-            memset(abs_path, 0, 4096);
+            char abs_path[PATH_MAX];  // => dirname/file_pathname, // TODO: MAX_PATH in linux/limits.h
+            memset(abs_path, 0, PATH_MAX);
 
             // Gestisco il caso in cui dirname termina con '/' e file_pathname inizia con '/'
             //if(dirname[dirname_length-1] == '/' && file_pathname[0] == '/') dirname[dirname_length-1] = '\0';
             // Controllo se dirname termina con '/' oppure file_pathname inizia con '/'
             int slash = dirname[dirname_length - 1] == '/' || file_pathname[0] == '/';
             // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
-            snprintf(abs_path, 4096, slash ? "%s%s" : "%s/%s", dirname, file_pathname);
+            snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, file_pathname);
 
             // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
             //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
@@ -507,15 +507,15 @@ int writeFile(const char* pathname, const char* dirname){
                 // Creo il path completo per il salvataggio del file
                 // Calcolo la lunghezza del path indicato da dirname
                 size_t dirname_length = strlen(dirname);
-                char abs_path[4096]; // => dirname/victim_pathname, // TODO: MAX_PATH in linux/limits.h
-                memset(abs_path, 0, 4096);
+                char abs_path[PATH_MAX]; // => dirname/victim_pathname, // TODO: MAX_PATH in linux/limits.h
+                memset(abs_path, 0, PATH_MAX);
                 
                 // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
                 //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
                 // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
                 int slash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
                 // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
-                snprintf(abs_path, 4096, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);\
+                snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);\
 
                 // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
                 //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
@@ -646,15 +646,15 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
                 // Creo il path completo per il salvataggio del file
                 // Calcolo la lunghezza del path indicato da dirname
                 size_t dirname_length = strlen(dirname);
-                char abs_path[4096]; // => dirname/victim_pathname, // TODO: MAX_PATH in linux/limits.h
-                memset(abs_path, 0, 4096);
+                char abs_path[PATH_MAX]; // => dirname/victim_pathname, // TODO: MAX_PATH in linux/limits.h
+                memset(abs_path, 0, PATH_MAX);
                 
                 // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
                 //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
                 // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
                 int slash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
                 // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
-                snprintf(abs_path, 4096, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);
+                snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);
 
                 // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
                 //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
