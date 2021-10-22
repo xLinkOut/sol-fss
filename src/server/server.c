@@ -68,7 +68,7 @@ static void* signals_handler(void* sigset) {
     int signal;
     // Aspetto l'arrivo di un segnale tra SIGINT, SIGQUIT e SIGHUP
     if ((error = sigwait((sigset_t*)sigset, &signal)) != 0) {
-        fprintf(stderr, "Error: something wrong happened while waiting for signals!\n");
+        log_event("ERROR", "Something wrong happened while waiting for signals: %d", error);
         exit(error);
     }
 
@@ -140,7 +140,7 @@ static void* worker(void* args) {
 
         // Controllo che la pop non abbia ritornato un codice di errore (-2)
         if (fd_ready == -2) {
-            perror("Error: failed to pop an element from task queue");
+            log_event("ERROR", "failed to pop an element from task queue: (%d) ", errno);
             break;
         }
 
@@ -149,8 +149,8 @@ static void* worker(void* args) {
 
         // Controllo che in coda non sia finito un qualsiasi altro valore negativo
         if (fd_ready < 0) {
-            fprintf(stderr, "Error: negative file descriptor in task queue\n");
-            return NULL;
+            log_event("ERROR", "negative file descriptor in task queue: %d", fd_ready);
+            continue;
         }
 
         // A questo punto sono sicuro di avere un fd valido
@@ -160,8 +160,8 @@ static void* worker(void* args) {
         memset(request, 0, MESSAGE_LENGTH);
         // Leggo il contenuto della richiesta del client
         if (readn((long)fd_ready, (void*)request, MESSAGE_LENGTH) == -1) {
-            fprintf(stderr, "Error: read on client failed\n");
-            return NULL;
+            log_event("ERROR", "readn failed to read client request: (%d) ", errno);
+            continue;
         }
 
         // * Faccio il parsing della richiesta
@@ -174,7 +174,7 @@ static void* worker(void* args) {
         // Recupero dalla richiesta il comando che deve essere eseguito
         int command;
         if (sscanf(token, "%d", &command) != 1) {
-            fprintf(stderr, "Error: invalid command in request: %s\n", request);
+            log_event("ERROR", "invalid command in request: %s", request);
             continue;
         }
 
@@ -185,14 +185,14 @@ static void* worker(void* args) {
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
                 if (!token || sscanf(token, "%s", pathname) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad open request: (%d) ", errno);
                     break;
                 }
                 // Parso i flags dalla richiesta
                 int flags = 0;
                 token = strtok_r(NULL, " ", &strtok_status);
                 if (!token || sscanf(token, "%d", &flags) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad open request: (%d) ", errno);
                     break;
                 }
 
@@ -204,7 +204,7 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in open failed: (%d) ", errno);
                     break;
                 }
 
@@ -216,7 +216,7 @@ static void* worker(void* args) {
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
                 if (!token || sscanf(token, "%s", pathname) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad read request: (%d) ", errno);
                     break;
                 }
 
@@ -237,13 +237,13 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d %zd", code, code == 1 ? size : 0);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in read failed: (%d) ", errno);
                     break;
                 }
                 
                 if(api_exit_code == -1) break;
                 if (writen((long)fd_ready, contents, size) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in read failed: (%d) ", errno);
                     break;
                 }
 
@@ -254,18 +254,18 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", 0);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in read failed: (%d) ", errno);
                     break;
                 }
 
-                log_event("INFO", "[%d] READ: %s %zu => %c", thread_id, pathname, size, api_exit_code == 0 ? 'O' : 'X');
+                log_event("INFO", "[%d] READ: %s %zu bytes => %c", thread_id, pathname, size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case READN:  // ! readNFiles: READN <int:n>
                 // Parso il numero di files dalla richiesta
                 token = strtok_r(NULL, " ", &strtok_status);
                 if (!token || sscanf(token, "%d", &N) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad readn request: (%d) ", errno);
                     break;
                 }
 
@@ -280,7 +280,7 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in readn failed: (%d) ", errno);
                     break;
                 }
 
@@ -293,17 +293,17 @@ static void* worker(void* args) {
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", files_read[i]->name, files_read[i]->size);
                         if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                            perror("Error: writen failed");
+                            log_event("ERROR", "writen in readn failed: (%d) ", errno);
                             break;
                         }
 
                         // Invio al client il contenuto del file
                         if (writen((long)fd_ready, files_read[i]->contents, files_read[i]->size) == -1) {
-                            perror("Error: writen failed");
+                            log_event("ERROR", "writen in readn failed: (%d) ", errno);
                             break;
                         }
 
-                        log_event("INFO", "[%d] READN: %d %s %zd => 'O'", thread_id, i+1, files_read[i]->name, files_read[i]->size);
+                        log_event("INFO", "[%d] READN: %d %s %zd bytes => O", thread_id, i+1, files_read[i]->name, files_read[i]->size);
 
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*)files_read[i]);
@@ -318,7 +318,7 @@ static void* worker(void* args) {
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
                 if (!token || sscanf(token, "%s", pathname) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad write request: (%d) ", errno);
                     break;
                 }
 
@@ -326,7 +326,7 @@ static void* worker(void* args) {
                 size_t file_size = 0;
                 token = strtok_r(NULL, " ", &strtok_status);
                 if (!token || sscanf(token, "%zd", &file_size) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad write request: (%d) ", errno);
                     break;
                 }
 
@@ -335,13 +335,13 @@ static void* worker(void* args) {
                 // Conosco la dimensione del file, posso allocare lo spazio necessario
                 contents = malloc(file_size); // Liberare questa memoria è compito di storage_file_destroy
                 if(!contents){
-                    perror("Error: failed to allocate memory for contents");
+                    log_event("ERROR", "failed to allocate memory for contents in write: (%d) ", errno);
                     break;
                 }
                 memset(contents, 0, file_size);
                 // Ricevo dal client il contenuto del file
                 if(readn((long)fd_ready, contents, file_size) == -1){
-                    perror("Error: readn failed");
+                    log_event("ERROR", "readn in write failed: (%d) ", errno);
                     free(contents);
                     break;
                 }
@@ -355,7 +355,7 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", victims_no);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in write failed: (%d) ", errno);
                     break;
                 }
 
@@ -368,17 +368,17 @@ static void* worker(void* args) {
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
                         if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                            perror("Error: writen failed");
+                            log_event("ERROR", "writen in write failed: (%d) ", errno);
                             break;
                         }
 
                         // Invio al client il contenuto del file
                         if (writen((long)fd_ready, victims[i]->contents, victims[i]->size) == -1) {
-                            perror("Error: writen failed");
+                            log_event("ERROR", "writen in write failed: (%d) ", errno);
                             break;
                         }
 
-                        log_event("INFO", "[%d] VICTIM: %s %zu => %c", thread_id, victims[i]->name, victims[i]->size);
+                        log_event("INFO", "[%d] VICTIM: %s %zu bytes => %c", thread_id, victims[i]->name, victims[i]->size);
 
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*) victims[i]);
@@ -389,11 +389,11 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in write failed: (%d) ", errno);
                     break;
                 }
 
-                log_event("INFO", "[%d] WRITE: %s %zu => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
+                log_event("INFO", "[%d] WRITE: %s %zu bytes => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case APPEND: // ! appendToFile: APPEND <str:pathname> <int:size>
@@ -401,7 +401,7 @@ static void* worker(void* args) {
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
                 if (!token || sscanf(token, "%s", pathname) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad append request: (%d) ", errno);
                     break;
                 }
 
@@ -409,7 +409,7 @@ static void* worker(void* args) {
                 file_size = 0;
                 token = strtok_r(NULL, " ", &strtok_status);
                 if (!token || sscanf(token, "%zd", &file_size) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad append request: (%d) ", errno);
                     break;
                 }
 
@@ -418,13 +418,13 @@ static void* worker(void* args) {
                 // Conosco la dimensione del file, posso allocare lo spazio necessario
                 contents = malloc(file_size); // Questa memoria viene liberata poco più in basso dal server
                 if(!contents){
-                    perror("Error: failed to allocate memory for contents");
+                    log_event("ERROR", "failed to allocate memory for contents in append: (%d) ", errno);
                     break;
                 }
                 memset(contents, 0, file_size);
                 // Ricevo dal client il contenuto del file
                 if(readn((long)fd_ready, contents, file_size) == -1){
-                    perror("Error: readn failed");
+                    log_event("ERROR", "readn in append failed: (%d) ", errno);
                     free(contents);
                     break;
                 }
@@ -442,7 +442,7 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", victims_no);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in append failed: (%d) ", errno);
                     break;
                 }
 
@@ -455,17 +455,17 @@ static void* worker(void* args) {
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
                         if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                            perror("Error: writen failed");
+                            log_event("ERROR", "writen in append failed: (%d) ", errno);
                             break;
                         }
 
                         // Invio al client il contenuto del file
                         if (writen((long)fd_ready, victims[i]->contents, victims[i]->size) == -1) {
-                            perror("Error: writen failed");
+                            log_event("ERROR", "writen in append failed: (%d) ", errno);
                             break;
                         }
                         
-                        log_event("INFO", "[%d] VICTIM: %s %zu => %c", thread_id, victims[i]->name, victims[i]->size);
+                        log_event("INFO", "[%d] VICTIM: %s %zu bytes => %c", thread_id, victims[i]->name, victims[i]->size);
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*) victims[i]);
                     }
@@ -475,11 +475,11 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in append failed: (%d) ", errno);
                     break;
                 }
                 
-                log_event("INFO", "[%d] APPEND: %s %zu => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
+                log_event("INFO", "[%d] APPEND: %s %zu bytes => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case LOCK: // ! lockFile: LOCK <str:pathname>
@@ -487,7 +487,7 @@ static void* worker(void* args) {
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
                 if (!token || sscanf(token, "%s", pathname) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad lock request: (%d) ", errno);
                     break;
                 }
                 
@@ -500,7 +500,7 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in lock failed: (%d) ", errno);
                     break;
                 }
 
@@ -512,7 +512,7 @@ static void* worker(void* args) {
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
                 if (!token || sscanf(token, "%s", pathname) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad unlock request: (%d) ", errno);
                     break;
                 }
                 
@@ -525,7 +525,7 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in unlock failed: (%d) ", errno);
                     break;
                 }
 
@@ -537,7 +537,7 @@ static void* worker(void* args) {
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
                 if (!token || sscanf(token, "%s", pathname) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad close request: (%d) ", errno);
                     break;
                 }
 
@@ -549,7 +549,7 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in close failed: (%d) ", errno);
                     break;
                 }
 
@@ -561,7 +561,7 @@ static void* worker(void* args) {
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
                 if (!token || sscanf(token, "%s", pathname) != 1) {
-                    fprintf(stderr, "Error: bad request\n");
+                    log_event("ERROR", "bad remove request: (%d) ", errno);
                     break;
                 }
 
@@ -573,7 +573,7 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in remove failed: (%d) ", errno);
                     break;
                 }
 
@@ -586,14 +586,13 @@ static void* worker(void* args) {
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", CLIENT_LEFT);
                 if (writen((long)worker_args->pipe_output, (void*)response, PIPE_LEN) == -1) {
-                    perror("Error: writen failed");
+                    log_event("ERROR", "writen in disconnect failed: (%d) ", errno);
                     break;
                 }
                 log_event("INFO", "[%d] CLIENT: %d has left", thread_id, fd_ready);
                 break;
 
             default:
-                fprintf(stderr, "Error: unknown command %d\n", command);
                 log_event("INFO", "[%d] CLIENT: %d sent an unknown command: %d", thread_id, fd_ready, command);
                 break;
         }
@@ -602,7 +601,7 @@ static void* worker(void* args) {
         memset(response, 0, MESSAGE_LENGTH);
         snprintf(response, MESSAGE_LENGTH, "%d", fd_ready);
         if (writen((long)worker_args->pipe_output, (void*)response, PIPE_LEN) == -1) {
-            perror("Error: writen failed");
+            log_event("ERROR", "writen in worker failed: (%d) ", errno);
             continue;
         }
     }
@@ -945,9 +944,8 @@ int main(int argc, char* argv[]) {
                     // * Nuovo connessione in entrata
                     // Accetto la connessione in entrata e controllo eventuali errori
                     if ((client_socket = accept(server_socket, NULL, 0)) == -1) {
-                        // TODO: cleanup prima di uscire
-                        perror("Error: failed to accept an incoming connection");
-                        return errno;
+                        log_event("ERROR", "failed to accept an incoming connection: (%d) ", errno);
+                        continue;
                     }
                     // Aggiungo il nuovo descrittore nella maschera di partenza
                     FD_SET(client_socket, &set);
@@ -957,17 +955,16 @@ int main(int argc, char* argv[]) {
                     active_clients++;
                     //printf("Active clients: %d\n", active_clients);
                     log_event("INFO", "[000000000] CLIENT: %d connected", client_socket);
-                    //printf("Info: accepted incoming connection on %d\n", client_socket);
 
                 } else if (fd == pipe_workers[0]) {
                     // * Nuova comunicazione da un thread worker
                     memset(pipe_buffer, 0, PIPE_LEN);
                     if (readn((long)fd, (void*)pipe_buffer, PIPE_LEN) == -1) {
-                        perror("Error: readn failed on pipe");
+                        log_event("ERROR", "readn failed on pipe: (%d) ", errno);
                         continue;
                     }
                     if (sscanf(pipe_buffer, "%d", &pipe_message) != 1) {
-                        perror("Error: sscanf failed");
+                        log_event("ERROR", "sscanf failed: (%d) ", errno);
                         continue;
                     }
                     if (pipe_message == CLIENT_LEFT) {
