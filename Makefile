@@ -85,8 +85,10 @@ clean cleanall:
 # == TESTS
 
 test1: client server
+	valgrind --leak-check=full $(BUILD_DIR)/server $(TESTS_DIR)/config-1.txt &
 	@chmod +x $(TESTS_DIR)/test-1.sh
 	$(TESTS_DIR)/test-1.sh
+	pkill -HUP -f $(BUILD_DIR)/server
 
 test2:
 
