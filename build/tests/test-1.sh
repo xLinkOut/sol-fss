@@ -6,7 +6,8 @@
 # *  Singole istanze del client testano tutte le APIs disponibili
 # *  con un ritardo di 200 ms ed il flag -p attivo
 
-MEGABYTE=10000000
+KILOBYTE=1024
+MEGABYTE=1048576
 
 BUILD_DIR=./build
 TESTS_DIR=$BUILD_DIR/tests
@@ -23,7 +24,7 @@ mkdir $DUMMY_DIR
 mkdir $SAVES_DIR
 # Genero 5 dummy file, da 10 a 50 Mb
 for i in {1..5}; do
-    base64 /dev/urandom | head -c $(($i * $MEGABYTE)) > $DUMMY_DIR/dummy-$i
+    base64 /dev/urandom | head -c $(($i * $MEGABYTE * 10)) > $DUMMY_DIR/dummy-$i
 done
 
 # Testo tutte le operazioni implementate dal server
