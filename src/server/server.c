@@ -353,6 +353,8 @@ static void* worker(void* args) {
                     }
                 }
 
+                if(files_read) free(files_read);
+
                 log_event("INFO", "[%d] READN: %d => %c", thread_id, N, api_exit_code >= 0 ? 'O' : 'X');
                 break;
 
@@ -399,6 +401,7 @@ static void* worker(void* args) {
                 snprintf(response, MESSAGE_LENGTH, "%d", victims_no);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
                     log_event("ERROR", "writen in write failed: (%d) ", errno);
+                    if(victims) free(victims);
                     break;
                 }
 
@@ -428,6 +431,9 @@ static void* worker(void* args) {
                     }
                 }
                 
+                if(victims) free(victims);
+                
+
                 // Preparo il buffer per la risposta
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);

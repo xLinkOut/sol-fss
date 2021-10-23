@@ -415,10 +415,12 @@ int storage_read_n_files(storage_t* storage, int N, storage_file_t*** read_files
 
     if (files_no < 0) {
         // L'operazione è fallita, ritorno errore
+        free(*read_files);
         rwlock_done_read(storage->rwlock);
         return -1;
     }
 
+    // TODO: sta aggiornando le copie, deve usare icl_hash_find
     for (int i = 0; i < files_no; i++) {
         if ((*read_files)[i]) {
             storage_file_t* current_file = (*read_files)[i];
