@@ -74,12 +74,16 @@ utils.o:
 
 # == CLEAN
 
-# Objects, Socket, Logs, Dummys
-clean cleanall:
+# Objects, Socket, Logs
+clean:
 	rm -f $(BUILD_DIR)/*.o
 	rm -f $(BUILD_DIR)/*.sk
 	rm -f $(BUILD_DIR)/*.log
+
+# Objects, Socket, Logs, Dummy, Saves
+cleanall: clean
 	rm -rf $(TESTS_DIR)/dummy
+	rm -rf $(TESTS_DIR)/saves
 
 # == TESTS
 
