@@ -292,13 +292,6 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int* 
             }
         }
 
-        printf("Victims number: %d\n", *victims_no);
-        if(*victims && *victims_no > 0)
-            for(int i=0;i < *victims_no;i++)
-                printf("Victim n.%d: %s %zu %p\n", i+1, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
-
-        if(*victims_no == 0) free(*victims);
-
         // Rilascio l'accesso in lettura sullo storage
         rwlock_done_read(storage->rwlock);
         // TODO: metodo per switchare read<->write lock atomicamente
@@ -485,48 +478,46 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
         return -1;
     }
 
-    // Algoritmo di rimpiazzo
-    *victims_no = 0;
-    *victims = malloc(sizeof(storage_file_t*) * storage->number_of_files);  // Al più, rimuovo tutti i file presenti
-    
-    // Finché non c'è spazio sufficiente a contenere il nuovo file, seleziono file da rimuovere
-    while ((storage->capacity - file->size) + size > storage->max_capacity) {
-        // Seleziono il file da espellere
-        storage_file_t* victim = (storage_file_t*)icl_hash_get_victim(storage->files, storage->replacement_policy, pathname);
+    // Se lo storage ha esaurito lo spazio libero, faccio partire l'algoritmo di rimpiazzo
+    if ((storage->capacity - file->size) + size > storage->max_capacity){
+        // Algoritmo di rimpiazzo
+        *victims_no = 0;
+        *victims = malloc(sizeof(storage_file_t*) * storage->number_of_files);  // Al più, rimuovo tutti i file presenti
 
-        if (!victim) {
-            // Non è stato possibile espelle alcun file, scrittura annullata
-            rwlock_done_read(file->rwlock);
-            rwlock_done_read(storage->rwlock);
-            errno = ECANCELED;
-            return -1;
+        // Finché non c'è spazio sufficiente a contenere il nuovo file, seleziono file da rimuovere
+        while ((storage->capacity - file->size) + size > storage->max_capacity) {
+            // Seleziono il file da espellere
+            storage_file_t* victim = (storage_file_t*)icl_hash_get_victim(storage->files, storage->replacement_policy, pathname);
+
+            if (!victim) {
+                // Non è stato possibile espelle alcun file, scrittura annullata
+                rwlock_done_read(file->rwlock);
+                rwlock_done_read(storage->rwlock);
+                errno = ECANCELED;
+                return -1;
+            }
+
+            // Effettuo una copia del file per poterlo inviare al client
+            (*victims)[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
+
+            // Elimino il file dallo storage
+            if(icl_hash_delete(storage->files, victim->name, NULL, storage_file_destroy) == -1){
+                // Errore nella cancellazione del file
+                // Annullo la selezione della vittima, e riprovo
+                storage_file_destroy((*victims[*victims_no]));
+                continue;
+            }
+
+            // Aggiorno le informazioni dello storage
+            storage->number_of_files--;                       // Decremento il numero di file nello storage
+            storage->capacity -= (*victims)[*victims_no]->size;  // Libero lo spazio occupato dal file rimosso
+
+            // Incremento il numero dei file espulsi
+            (*victims_no)++;
         }
 
-        // Effettuo una copia del file per poterlo inviare al client
-        (*victims)[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
-
-        // Elimino il file dallo storage
-        if(icl_hash_delete(storage->files, victim->name, NULL, storage_file_destroy) == -1){
-            // Errore nella cancellazione del file
-            // Annullo la selezione della vittima, e riprovo
-            storage_file_destroy((*victims[*victims_no]));
-            continue;
-        }
-
-        // Aggiorno le informazioni dello storage
-        storage->number_of_files--;                       // Decremento il numero di file nello storage
-        storage->capacity -= (*victims)[*victims_no]->size;  // Libero lo spazio occupato dal file rimosso
-        
-        // Incremento il numero dei file espulsi
-        (*victims_no)++;
     }
 
-    printf("Victims number: %d\n", *victims_no);
-    if(*victims && *victims_no > 0)
-        for(int i=0;i < *victims_no;i++)
-            printf("Victim n.%d: %s %zu %p\n", i+1, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
-
-    if(*victims_no == 0) free(*victims);
 
     // Rilascio l'accesso in lettura sul file
     rwlock_done_read(file->rwlock);
@@ -604,48 +595,46 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
         return -1;
     }
 
-    // Algoritmo di rimpiazzo
-    *victims_no = 0;
-    *victims = malloc(sizeof(storage_file_t*) * storage->number_of_files);  // Al più, rimuovo tutti i file presenti
-    
-    // Finché non c'è spazio sufficiente a contenere il nuovo file, seleziono file da rimuovere
-    while (storage->capacity + size > storage->max_capacity) {
-        // Seleziono il file da espellere
-        storage_file_t* victim = (storage_file_t*)icl_hash_get_victim(storage->files, storage->replacement_policy, pathname);
+    // Se lo storage ha esaurito lo spazio libero, faccio partire l'algoritmo di rimpiazzo
+    if (storage->capacity + size > storage->max_capacity){
+        // Algoritmo di rimpiazzo
+        *victims_no = 0;
+        *victims = malloc(sizeof(storage_file_t*) * storage->number_of_files);  // Al più, rimuovo tutti i file presenti
 
-        if (!victim) {
-            // Non è stato possibile espelle alcun file, scrittura annullata
-            rwlock_done_read(file->rwlock);
-            rwlock_done_read(storage->rwlock);
-            errno = ECANCELED;
-            return -1;
+        // Finché non c'è spazio sufficiente a contenere il nuovo file, seleziono file da rimuovere
+        while (storage->capacity + size > storage->max_capacity) {
+            // Seleziono il file da espellere
+            storage_file_t* victim = (storage_file_t*)icl_hash_get_victim(storage->files, storage->replacement_policy, pathname);
+
+            if (!victim) {
+                // Non è stato possibile espelle alcun file, scrittura annullata
+                rwlock_done_read(file->rwlock);
+                rwlock_done_read(storage->rwlock);
+                errno = ECANCELED;
+                return -1;
+            }
+
+            // Effettuo una copia del file per poterlo inviare al client
+            (*victims)[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
+
+            // Elimino il file dallo storage
+            if(icl_hash_delete(storage->files, victim->name, NULL, storage_file_destroy) == -1){
+                // Errore nella cancellazione del file
+                // Annullo la selezione della vittima, e riprovo
+                storage_file_destroy((*victims[*victims_no]));
+                continue;
+            }
+
+            // Aggiorno le informazioni dello storage
+            storage->number_of_files--;                       // Decremento il numero di file nello storage
+            storage->capacity -= (*victims)[*victims_no]->size;  // Libero lo spazio occupato dal file rimosso
+
+            // Incremento il numero dei file espulsi
+            (*victims_no)++;
         }
 
-        // Effettuo una copia del file per poterlo inviare al client
-        *victims[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
 
-        // Elimino il file dallo storage
-        if(icl_hash_delete(storage->files, victim->name, NULL, storage_file_destroy) == -1){
-            // Errore nella cancellazione del file
-            // Annullo la selezione della vittima, e riprovo
-            storage_file_destroy((*victims[*victims_no]));
-            continue;
-        }
-
-        // Aggiorno le informazioni dello storage
-        storage->number_of_files--;                       // Decremento il numero di file nello storage
-        storage->capacity -= (*victims)[*victims_no]->size;  // Libero lo spazio occupato dal file rimosso
-        
-        // Incremento il numero dei file espulsi
-        (*victims_no)++;
     }
-
-    printf("Victims number: %d\n", *victims_no);
-    if(*victims && *victims_no > 0)
-        for(int i=0;i < *victims_no;i++)
-            printf("Victim n.%d: %s %zu %p\n", i+1, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
-
-    if(*victims_no == 0) free(*victims);
 
     // Rilascio l'accesso in lettura sul file
     rwlock_done_read(file->rwlock);
