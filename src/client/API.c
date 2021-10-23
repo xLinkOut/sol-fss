@@ -130,14 +130,15 @@ int openFile(const char* pathname, int flags, const char* dirname){
         return -1;
     }
     
-    char victim_pathname[MESSAGE_LENGTH];
-    size_t victim_size = 0;
-    void* victim_contents = NULL;
-    char* token = NULL;
-    char* strtok_status = NULL;
-    int i = 0;
-
     if(victims_no > 0){
+        int i = 0;
+        char* token = NULL;
+        char* strtok_status = NULL;
+        
+        size_t victim_size = 0;
+        void* victim_contents = NULL;
+        char victim_pathname[MESSAGE_LENGTH];
+        
         if (VERBOSE) printf("%d file(s) have been ejected from the server\n", victims_no);
         for(;i<victims_no;i++){
             // Ricevo dal server il nome e la dimensione del file
@@ -177,7 +178,7 @@ int openFile(const char* pathname, int flags, const char* dirname){
                 // Creo il path completo per il salvataggio del file
                 // Calcolo la lunghezza del path indicato da dirname
                 size_t dirname_length = strlen(dirname);
-                char abs_path[PATH_MAX]; // => dirname/victim_pathname, // TODO: MAX_PATH in linux/limits.h
+                char abs_path[PATH_MAX]; // => dirname/victim_pathname
                 memset(abs_path, 0, PATH_MAX);
                 
                 // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
@@ -292,7 +293,7 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
         // Creo il path completo per il salvataggio del file
         // Calcolo la lunghezza del path indicato da dirname
         size_t dirname_length = strlen(dirname);
-        char abs_path[PATH_MAX]; // => dirname/pathname, // TODO: MAX_PATH in linux/limits.h
+        char abs_path[PATH_MAX]; // => dirname/pathname
         memset(abs_path, 0, PATH_MAX);
         
         // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
@@ -384,10 +385,11 @@ int readNFiles(int N, const char* dirname) {
     
     int i = 0;
     char* token = NULL;                  // Appoggio per strtok_r
+    char* strtok_status = NULL;          // Stato per strtok_r
+    
     size_t file_size = 0;                // Dimensione del file da leggere
     void* file_contents = NULL;          // Contenuto del file da leggere
-    char* strtok_status = NULL;          // Stato per strtok_r
-    char file_pathname[MESSAGE_LENGTH];  // Pathname del file
+    char file_pathname[MESSAGE_LENGTH];  // Pathname del file da leggere
 
     for (; i < files_no; i++) {
         // Ricevo dal server il nome e la dimensione del file
@@ -429,7 +431,7 @@ int readNFiles(int N, const char* dirname) {
             // Creo il path completo per il salvataggio del file
             // Calcolo la lunghezza del path indicato da dirname
             size_t dirname_length = strlen(dirname);
-            char abs_path[PATH_MAX];  // => dirname/file_pathname, // TODO: MAX_PATH in linux/limits.h
+            char abs_path[PATH_MAX];  // => dirname/file_pathname
             memset(abs_path, 0, PATH_MAX);
 
             // Gestisco il caso in cui dirname termina con '/' e file_pathname inizia con '/'
@@ -542,14 +544,16 @@ int writeFile(const char* pathname, const char* dirname){
         return -1;
     }
     
-    char victim_pathname[MESSAGE_LENGTH];
-    size_t victim_size = 0;
-    void* victim_contents = NULL;
-    char* token = NULL;
-    char* strtok_status = NULL;
-    int i = 0;
 
     if(victims_no > 0){
+        int i = 0;
+        char* token = NULL;
+        char* strtok_status = NULL;
+    
+        size_t victim_size = 0;
+        void* victim_contents = NULL;
+        char victim_pathname[MESSAGE_LENGTH];
+    
         if (VERBOSE) printf("%d file(s) have been ejected from the server\n", victims_no);
         for(;i<victims_no;i++){
             // Ricevo dal server il nome e la dimensione del file
@@ -679,14 +683,16 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
         return -1;
     }
     
-    char victim_pathname[MESSAGE_LENGTH];
-    size_t victim_size = 0;
-    void* victim_contents = NULL;
-    char* token = NULL;
-    char* strtok_status = NULL;
-    int i = 0;
 
     if(victims_no > 0){
+        int i = 0;
+        char* token = NULL;
+        char* strtok_status = NULL;
+
+        size_t victim_size = 0;
+        void* victim_contents = NULL;
+        char victim_pathname[MESSAGE_LENGTH];
+        
         if (VERBOSE) printf("%d file(s) have been ejected from the server\n", victims_no);
         for(;i<victims_no;i++){
             // Ricevo dal server il nome e la dimensione del file
@@ -725,7 +731,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
                 // Creo il path completo per il salvataggio del file
                 // Calcolo la lunghezza del path indicato da dirname
                 size_t dirname_length = strlen(dirname);
-                char abs_path[PATH_MAX]; // => dirname/victim_pathname, // TODO: MAX_PATH in linux/limits.h
+                char abs_path[PATH_MAX]; // => dirname/victim_pathname
                 memset(abs_path, 0, PATH_MAX);
                 
                 // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
