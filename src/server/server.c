@@ -127,6 +127,9 @@ static void* worker(void* args) {
     char pathname[MESSAGE_LENGTH];  // Quasi ogni API call prevede un pathname
     void* contents = NULL;
     int thread_id = (int)pthread_self();
+    // Algoritmo di rimpiazzo
+    int victims_no = 0;
+    storage_file_t** victims = NULL;
     // readNFiles
     int N = 0;
     storage_file_t** files_read = NULL;
@@ -197,8 +200,45 @@ static void* worker(void* args) {
 
                 printf("OPEN: %s %d\n", pathname, flags);
 
+                victims_no = 0;
+                victims = NULL;
                 // Eseguo la API call
-                api_exit_code = storage_open_file(worker_args->storage, pathname, flags, fd_ready);
+                api_exit_code = storage_open_file(worker_args->storage, pathname, flags, &victims_no, &victims, fd_ready);
+                
+                // Invio al client eventuali file espulsi
+                memset(response, 0, MESSAGE_LENGTH);
+                snprintf(response, MESSAGE_LENGTH, "%d", victims_no);
+                if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                    log_event("ERROR", "writen in open failed: (%d) ", errno);
+                    break;
+                }
+
+                if(victims_no > 0){
+                    log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
+                    // Invio al client i file espulsi
+                    for(int i=0;i<victims_no;i++){
+                        printf("Sending n.%d: %s %zd\n", i+1, victims[i]->name, victims[i]->size);
+                        // Invio al client il nome e la dimensione del file
+                        memset(response, 0, MESSAGE_LENGTH);
+                        snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
+                        if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
+                            log_event("ERROR", "writen in open failed: (%d) ", errno);
+                            break;
+                        }
+
+                        // Invio al client il contenuto del file
+                        if (writen((long)fd_ready, victims[i]->contents, victims[i]->size) == -1) {
+                            log_event("ERROR", "writen in open failed: (%d) ", errno);
+                            break;
+                        }
+
+                        log_event("INFO", "[%d] VICTIM: %s %zu bytes => %c", thread_id, victims[i]->name, victims[i]->size);
+
+                        // Libero la memoria dal file appena inviato
+                        storage_file_destroy((void*) victims[i]);
+                    }
+                }
+                
                 // Preparo il buffer per la risposta
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
@@ -346,8 +386,8 @@ static void* worker(void* args) {
                 }
                 
                 // Scrivo il contenuto del file all'intero dello storage
-                int victims_no = 0;
-                storage_file_t** victims = NULL;
+                victims_no = 0;
+                victims = NULL;
                 api_exit_code = storage_write_file(worker_args->storage, pathname, contents, file_size, &victims_no, &victims, fd_ready);
 
                 // Invio al client eventuali file espulsi

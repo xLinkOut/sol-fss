@@ -18,7 +18,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 int closeConnection(const char* sockname);
 
 // * Richiede la creazione e/o l'apertura del file <pathname>, in accordo a <flags>
-int openFile(const char* pathname, int flags);
+int openFile(const char* pathname, int flags, const char* dirname);
 
 // * Legge il contenuto del file <pathname> nel buffer <buf>
 int readFile(const char* pathname, void** buf, size_t* size, const char* dirname);

@@ -80,7 +80,7 @@ void storage_file_destroy(void* file);
 
 // ! APIs
 // * Crea e/o apre il file <pathname> in lettura ed eventualmente in scrittura, in accordo a <flags>
-int storage_open_file(storage_t* storage, const char* pathname, int flags, int client);
+int storage_open_file(storage_t* storage, const char* pathname, int flags, int* victims_no, storage_file_t*** victims, int client);
 
 // * Legge il file <pathname> dallo storage
 int storage_read_file(storage_t* storage, const char* pathname, void** contents, size_t* size, int client);

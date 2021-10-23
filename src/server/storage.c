@@ -157,7 +157,7 @@ void storage_file_print(storage_file_t* file) {
 
 // ! APIs
 
-int storage_open_file(storage_t* storage, const char* pathname, int flags, int client) {
+int storage_open_file(storage_t* storage, const char* pathname, int flags, int* victims_no, storage_file_t*** victims, int client) {
     // Controllo la validità degli argomenti
     if (!storage || !pathname || flags < 0) {
         errno = EINVAL;
@@ -254,13 +254,48 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int c
 
     } else { // && O_CREATE
         // * Il file non esiste ancora nello storage, lo creo
-        
-        // Controllo che nello storage ci sia effettivamente spazio in termini di numero di files
-        // ? In questo caso occorre far partire la procedura di replace? Magari per espellere il file più piccolo?
-        /* if (storage->number_of_files == storage->max_files) {
-            errno = ENOSPC;
-            return -1;
-        } */
+
+        // Se è stato raggiunto il numero massimo di file consentiti, faccio partire l'algoritmo di rimpiazzo
+        if (storage->number_of_files == storage->max_files) {
+            // Algoritmo di rimpiazzo
+            *victims_no = 0;
+            *victims = malloc(sizeof(storage_file_t*) * storage->number_of_files);  // Al più, rimuovo tutti i file presenti
+            // Nonostante serva espellere un solo file, utilizzo un while
+            while (storage->number_of_files == storage->max_files) {
+                // Seleziono il file da espellere
+                storage_file_t* victim = (storage_file_t*)icl_hash_get_victim(storage->files, storage->replacement_policy, pathname);
+
+                if (!victim) {
+                    // Non è stato possibile espelle alcun file, scrittura annullata
+                    rwlock_done_read(storage->rwlock);
+                    errno = ECANCELED;
+                    return -1;
+                }
+
+                // Effettuo una copia del file per poterlo inviare al client
+                (*victims)[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
+
+                // Elimino il file dallo storage
+                if(icl_hash_delete(storage->files, victim->name, NULL,storage_file_destroy) == -1){
+                    // Errore nella cancellazione del file
+                    printf("Errore nella cancellazione del file\n");
+                }
+
+                // Aggiorno le informazioni dello storage
+                storage->number_of_files--;                       // Decremento il numero di file nello storage
+                storage->capacity -= (*victims)[*victims_no]->size;  // Libero lo spazio occupato dal file rimosso
+                
+                // Incremento il numero dei file espulsi
+                (*victims_no)++;
+            }
+        }
+
+        printf("Victims number: %d\n", *victims_no);
+        if(*victims && *victims_no > 0)
+            for(int i=0;i < *victims_no;i++)
+                printf("Victim n.%d: %s %zu %p\n", i+1, (*victims)[i]->name, (*victims)[i]->size, (*victims)[i]->contents);
+
+        if(*victims_no == 0) free(*victims);
 
         // Rilascio l'accesso in lettura sullo storage
         rwlock_done_read(storage->rwlock);
@@ -466,8 +501,7 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
         }
 
         // Effettuo una copia del file per poterlo inviare al client
-        // TODO: Wrappare *victims tra le parentesi tonde
-        *victims[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
+        (*victims)[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
 
         // Elimino il file dallo storage
         if(icl_hash_delete(storage->files, victim->name, NULL,storage_file_destroy) == -1){

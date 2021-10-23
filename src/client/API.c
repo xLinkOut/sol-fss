@@ -97,7 +97,7 @@ int closeConnection(const char* sockname){
     return 0;
 }
 
-int openFile(const char* pathname, int flags){
+int openFile(const char* pathname, int flags, const char* dirname){
     // Controllo la validità degli argomenti
     if(!pathname || flags < 0){
         errno = EINVAL;
@@ -118,6 +118,94 @@ int openFile(const char* pathname, int flags){
     }
 
     if(VERBOSE) printf("Request to open '%s' file... \n", pathname);
+
+    // Ricevo dal server eventuali file espulsi
+    int victims_no = 0;
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+        return -1;
+    }
+    if(sscanf(message_buffer, "%d", &victims_no) != 1){
+        errno = EBADMSG;
+        return -1;
+    }
+    
+    char victim_pathname[MESSAGE_LENGTH];
+    size_t victim_size = 0;
+    void* victim_contents = NULL;
+    char* token = NULL;
+    char* strtok_status = NULL;
+    int i = 0;
+
+    if(victims_no > 0){
+        if (VERBOSE) printf("%d file(s) have been ejected from the server\n", victims_no);
+        for(;i<victims_no;i++){
+            // Ricevo dal server il nome e la dimensione del file
+            memset(message_buffer, 0, MESSAGE_LENGTH);
+            memset(victim_pathname,0,MESSAGE_LENGTH);
+            if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+                return -1;
+            }
+
+            // Pathname
+            token = strtok_r(message_buffer, " ", &strtok_status);
+            if (!token || sscanf(token, "%s", victim_pathname) != 1) {
+                errno = EBADMSG;
+                return -1;
+            }
+            // Size
+            token = strtok_r(NULL, " ", &strtok_status);
+            if (!token || sscanf(token, "%zd", &victim_size) != 1) {
+                errno = EBADMSG;
+                return -1;
+            }
+
+            if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i+1, victim_size, victim_pathname);
+
+            // Alloco spazio per il file
+            victim_contents = malloc(victim_size);
+            if(!victim_contents) return -1;
+
+            memset(victim_contents, 0, victim_size);
+            if(readn((long)client_socket, victim_contents, victim_size) == -1){
+                return -1;
+            }
+
+            // Se il client ha specificato una cartella in cui salvare i file espulsi,
+            //  procedo a salvare i file ricreando l'albero delle directories specificato nel pathname
+            if(dirname){
+                // Creo il path completo per il salvataggio del file
+                // Calcolo la lunghezza del path indicato da dirname
+                size_t dirname_length = strlen(dirname);
+                char abs_path[PATH_MAX]; // => dirname/victim_pathname, // TODO: MAX_PATH in linux/limits.h
+                memset(abs_path, 0, PATH_MAX);
+                
+                // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
+                //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
+                // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
+                int slash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
+                // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
+                snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);\
+
+                // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
+                //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
+                //  per poter contenere il file, in maniera ricorsiva. Un comportamento simile al comando 'mkdir -p <path>'
+                mkdir_p(abs_path);
+
+                // Salvo il contenuto del file sul disco
+                FILE* output_file = fopen(abs_path, "w");
+                if(!output_file) return -1;
+                if(fputs(victim_contents, output_file) == EOF){
+                    fclose(output_file);
+                    return -1;
+                }
+                if(fclose(output_file) == -1) return -1; 
+                if(VERBOSE) printf("%zd bytes saved to '%s'!\n", victim_size, abs_path);
+            }
+
+            free(victim_contents);
+        }
+    }
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
