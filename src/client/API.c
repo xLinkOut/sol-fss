@@ -224,7 +224,7 @@ int openFile(const char* pathname, int flags, const char* dirname){
         return -1;
     }
 
-    if(status > 0){
+    if(status >= 0){
         if (VERBOSE) printf("File opened successfully!\n");
         return status;
     }
@@ -335,7 +335,7 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
         return -1;
     }
 
-    if(status > 0){
+    if(status >= 0){
         if (VERBOSE) printf("Successfully read %zd bytes!\n", *size);
         return 0;
     }
@@ -644,7 +644,7 @@ int writeFile(const char* pathname, const char* dirname){
         return -1;
     }
     
-    if(status > 0){
+    if(status >= 0){
         if (VERBOSE) printf("%lld bytes written successfully!\n", file_stat.st_size);
         return status;
     }
@@ -782,7 +782,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
         return -1;
     }
 
-    if (status > 0) {
+    if (status >= 0) {
         if (VERBOSE) printf("%zd bytes added successfully!\n", size);
         return status;
     }
@@ -826,7 +826,7 @@ int lockFile(const char* pathname){
         return -1;
     }
 
-    if (status > 0) {
+    if (status >= 0) {
         if (VERBOSE) printf("File locked successfully!\n");
         return status;
     }
@@ -870,7 +870,7 @@ int unlockFile(const char* pathname){
         return -1;
     }
 
-    if (status > 0) {
+    if (status >= 0) {
         if (VERBOSE) printf("File unlocked successfully!\n");
         return status;
     }
@@ -914,7 +914,7 @@ int closeFile(const char* pathname){
         return -1;
     }
 
-    if (status > 0) {
+    if (status >= 0) {
         if (VERBOSE) printf("File closed successfully!\n");
         return status;
     }
@@ -958,7 +958,7 @@ int removeFile(const char* pathname){
         return -1;
     }
 
-    if (status > 0) {
+    if (status >= 0) {
         if (VERBOSE) printf("File removed successfully!\n");
         return status;
     }
