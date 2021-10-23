@@ -12,34 +12,34 @@ typedef struct Request {
     char* dirname;    // Parametro opzionale utilizzato congiuntamente a w|W|r|R
     time_t time;      // Tempo di attesa in millisecondi tra una richiesta e l'altra
     struct Request* next;
-} Request_t;
+} request_t;
 
 // * Struttura dati della coda
 typedef struct Queue {
-    Request_t* head;       // Testa
-    Request_t* tail;       // Coda
+    request_t* head;       // Testa
+    request_t* tail;       // Coda
     unsigned long length;  // Elementi in coda
-} Queue_t;
+} queue_t;
 
 // * Crea una coda vuota e ritorna un puntatore ad essa
-Queue_t* queue_init();
+queue_t* queue_init();
 
 // * Cancella una coda creata con queue_init
-void queue_destroy(Queue_t* queue);
+void queue_destroy(queue_t* queue);
 
 // * Inserisce una richiesta in coda
-int queue_push(Queue_t* queue, Request_t* new_request);
+int queue_push(queue_t* queue, request_t* new_request);
 
 // * Estrae una richiesta dalla coda
-Request_t* queue_pop(Queue_t* queue);
+request_t* queue_pop(queue_t* queue);
 
 // * Inizializza un nuovo nodo e ritorna un puntatore ad esso
-Request_t* queue_new_request();
+request_t* queue_new_request();
 
 // * Cancella un nodo creato con queue_new_node
-void queue_destroy_request(Request_t* request);
+void queue_destroy_request(request_t* request);
 
 // * Debug: stampa il contenuto della coda
-void queue_print(Queue_t*);
+void queue_print(queue_t*);
 
 #endif

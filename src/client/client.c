@@ -46,8 +46,8 @@ int main(int argc, char* argv[]) {
 
     int EXIT_CODE = EXIT_SUCCESS;           // Codice di uscita in caso di errore
     char* SOCKET_PATH = NULL;               // Percorso al socket file del server
-    Request_t* request = NULL;              // Descrizione di una singola richiesta
-    Queue_t* request_queue = queue_init();  // Coda delle richiesta
+    request_t* request = NULL;              // Descrizione di una singola richiesta
+    queue_t* request_queue = queue_init();  // Coda delle richiesta
     if (!request_queue) {
         fprintf(stderr, "Error: failed to create request queue\n");
         return errno;
