@@ -844,8 +844,7 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
     file->last_use_time = time(NULL);
     file->frequency++;
     
-    // ! Debug
-    storage_file_print(file);
+    //storage_file_print(file); // ! Debug
 
     // Rilascio l'accesso in scrittura sul file
     rwlock_done_write(file->rwlock);
