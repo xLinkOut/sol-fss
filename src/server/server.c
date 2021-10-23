@@ -111,7 +111,7 @@ static void* signals_handler(void* sigset) {
 // Struttura dati per passare più argomenti ai threads worker
 typedef struct worker_args {
     storage_t* storage;   // Riferimento allo storage in uso
-    Queue_t* task_queue;  // Coda dei task che arrivano e vengono smistati dal dispatcher
+    queue_t* task_queue;  // Coda dei task che arrivano e vengono smistati dal dispatcher
     int pipe_output;      // Pipe di comunicazione worker(s) <-> dispatcher
 } worker_args_t;
 
@@ -848,7 +848,7 @@ int main(int argc, char* argv[]) {
     }
 
     // ! TASKS QUEUE
-    Queue_t* task_queue = queue_init();
+    queue_t* task_queue = queue_init();
     if (!task_queue) {
         fprintf(stderr, "Error: failed to create a task queue");
         return EXIT_FAILURE;

@@ -7,16 +7,16 @@
 #include <stdlib.h>
 #include <utils.h>
 
-Queue_t* queue_init() {
+queue_t* queue_init() {
     // Alloco memoria per la coda
-    Queue_t* queue = malloc(sizeof(Queue_t));
+    queue_t* queue = malloc(sizeof(queue_t));
     if (!queue){
         perror("Error: failed to allocate memory for queue");
         return NULL;
     }
 
     // Creo il nodo di testa
-    if (!(queue->head = malloc(sizeof(Node_t)))) {
+    if (!(queue->head = malloc(sizeof(node_t)))) {
         free(queue);
         return NULL;
     }
@@ -51,11 +51,11 @@ Queue_t* queue_init() {
     return queue;
 }
 
-void queue_destroy(Queue_t* queue) {
+void queue_destroy(queue_t* queue) {
     if (!queue) return;
     // Scorro la coda per cancellare tutti i nodi
     while (queue->head != queue->tail) {
-        Node_t* node = (Node_t*)queue->head;
+        node_t* node = (node_t*)queue->head;
         queue->head = queue->head->next;
         free(node);
     }
@@ -67,14 +67,14 @@ void queue_destroy(Queue_t* queue) {
     free(queue);
 }
 
-int queue_push(Queue_t* queue, int fd_ready) {
+int queue_push(queue_t* queue, int fd_ready) {
     // Controllo la validità degli argomenti
     if (!queue) {
         errno = EINVAL;
         return -1;
     }
     // Creo un nuovo nodo
-    Node_t* new_node = malloc(sizeof(Node_t));
+    node_t* new_node = malloc(sizeof(node_t));
     if (!new_node) return -1;
     // Imposto il suo contenuto
     new_node->fd_ready = fd_ready;
@@ -93,7 +93,7 @@ int queue_push(Queue_t* queue, int fd_ready) {
     return 0;
 }
 
-int queue_pop(Queue_t* queue) {
+int queue_pop(queue_t* queue) {
     // Controllo la validità degli argomenti
     if (!queue) {
         errno = EINVAL;
@@ -114,7 +114,7 @@ int queue_pop(Queue_t* queue) {
     if (!queue->head->next) return -2;
 
     // Preparo l'occorrente per estrarre il nodo dalla coda
-    Node_t* node = (Node_t*)queue->head;
+    node_t* node = (node_t*)queue->head;
     int fd_ready = (queue->head->next)->fd_ready;
     queue->head = queue->head->next;
     queue->length--;
