@@ -11,6 +11,9 @@
 #include <constants.h>
 #include <sys/stat.h>
 #include <stdbool.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <stdio.h>
 
 // Imposto il socket con un valore negativo, e.g. 'non connesso'
 int client_socket = -1;
@@ -962,4 +965,45 @@ int removeFile(const char* pathname){
 
     if (VERBOSE) printf("Something went wrong!\n");
     return status;
+}
+
+int writeDirectory(const char* pathname, int upperbound, const char* dirname) {
+    // Controllo la validità dei parametri
+    if (!pathname || upperbound <= 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    DIR* dir;              // Directory corrente
+    char path[PATH_MAX];   // Percorso completo
+    struct dirent* entry;  // Entry all'interno della cartella
+
+    // Apro la cartella
+    if (!(dir = opendir(pathname))) return -1;
+
+    while ((entry = readdir(dir)) != NULL) {
+        snprintf(path, sizeof(path), "%s/%s", pathname, entry->d_name);
+        if (entry->d_type == DT_DIR) {
+            // E' una directory
+            // Se corrisponde a '.' oppure '..', salto
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+            // Analizzo il suo contenuto ricorsivamente
+            writeDirectory(path, upperbound, dirname);
+        } else {
+            // E' un file, lo carico sul server se non ho raggiunto il limite superiore
+            if(upperbound > 0){
+                // Creo il file sul server e lo apro in scrittura
+                openFile(path, O_CREATE | O_LOCK, dirname);
+                // Carico il contenuto del file
+                writeFile(path, dirname);
+                // Infine, chiudo il file
+                closeFile(path);
+                upperbound--;
+            }
+        }
+    }
+    // Chiudo la cartella
+    closedir(dir);
+
+    return 0;
 }

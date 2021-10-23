@@ -11,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 #include <utils.h>
+#include <limits.h>
 
 // TODO: Liberare eventuale memoria prima di uscire, anche nel caso di -h
 
@@ -241,18 +242,53 @@ int main(int argc, char* argv[]) {
     if (VERBOSE) printf("Connection established correctly to '%s'\n", SOCKET_PATH);
 
     // * Esecuzione delle richieste, in ordine FIFO
+    char* token = NULL;
     char* filename = NULL;
     char* strtok_status = NULL;
-    // readFile
+    // readFile (-r)
     void* buffer = NULL;
     size_t size = 0;
-    // readNFiles
+    // readNFiles (-R)
     long N = 0;
-    char* token = NULL;
+    // writeDirectory (-w) 
+    char* pathname = NULL;
+    long upperbound = INT_MAX;
+
 
     while ((request = queue_pop(request_queue))) {
         printf("%c %s (%s, %lu)\n", request->command, request->arguments, request->dirname, request->time);
         switch (request->command) {
+            case 'w':  // Invio al server il contenuto di una cartella
+                // Viene specificato il path ad una cartella, ed un parametro <n> opzionale
+                //  che limita superiormente il numero di file da inviare
+                // Parso il path alla cartella
+                pathname = strtok_r(request->arguments, ",", &strtok_status);
+                // Parso il numero di file da inviare
+                token = strtok_r(NULL, ",", &strtok_status);
+                if (token) {
+                    // Il parametro <n> è stato specificato, lo parso
+                    token = strtok_r(token, "=", &strtok_status);
+                    token = strtok_r(NULL, "=", &strtok_status);
+                    if (!is_number(token, &upperbound) || upperbound < 0) {
+                        fprintf(stderr, "Error: -w upper bound '%ld' is invalid\n", upperbound);
+                        break;
+                    }
+                } else {
+                    // Il parametro non è stato specificato, lo imposto a INT_MAX
+                    //  => nessun limite superiore al numero di file da inviare
+                    upperbound = INT_MAX;
+                }
+                // Se è stato specificato proprio 0, porto a INT_MAX
+                if (upperbound == 0) upperbound = INT_MAX;
+                // Se l'ultimo carattere del path specificato è uno slash, lo rimuovo
+                if (pathname[strlen(pathname) - 1] == '/') pathname[strlen(pathname) - 1] = '\0';
+                // Chiamo il wrapper per inviare al server i file contenuti in <path>
+                if (writeDirectory(pathname, upperbound, request->dirname) == -1) {
+                    perror("Error: failed to upload a directory");
+                }
+
+                break;
+
             case 'W':  // Invio al server un(a lista di) file
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);

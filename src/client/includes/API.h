@@ -45,4 +45,8 @@ int closeFile(const char* pathname);
 // * Richiede che il file sia stato aperto in scrittura
 int removeFile(const char* pathname);
 
+// * Wrapper utilizzato per caricare il contenuto di una cartella sul server
+// * Utilizza le API: openFile, writeFile, closeFile.
+int writeDirectory(const char* pathname, int upperbound, const char* dirname);
+
 #endif
