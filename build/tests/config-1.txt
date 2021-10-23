@@ -11,6 +11,6 @@ STORAGE_MAX_FILES=10000
 REPLACEMENT_POLICY=fifo
 
 # Path al Socket file
-SOCKET_PATH=./fss.sk
+SOCKET_PATH=./build/fss.sk
 # Path al Log file
-LOG_PATH=./fss.log
+LOG_PATH=./build/fss.log
