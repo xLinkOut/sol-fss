@@ -32,6 +32,10 @@ void log_event(const char* level, const char* message, ...) {
     // Formatto la data e l'ora attuale
     time_t timer = time(NULL);
     struct tm* tm_info = localtime(&timer);
+    if(!tm_info){
+        perror("Error: failed to get timestamp");
+        return;
+    }
     char date_time[20];
     strftime(date_time, sizeof(date_time), "%Y-%m-%d %H:%M:%S", tm_info);
     

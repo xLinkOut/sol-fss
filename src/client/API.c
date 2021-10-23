@@ -509,6 +509,7 @@ int writeFile(const char* pathname, const char* dirname){
     memset(message_buffer, 0, MESSAGE_LENGTH);
     snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %lld", WRITE, pathname, file_stat.st_size);
     if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+        fclose(file);
         return -1;
     }
 
@@ -516,7 +517,10 @@ int writeFile(const char* pathname, const char* dirname){
 
     // Alloco la memoria necessaria per leggere il file
     void* contents = malloc(file_stat.st_size);
-    if(!contents) return -1;
+    if(!contents){
+        fclose(file);
+        return -1;
+    }
     // Leggo il contenuto del file come un unico blocco di dimensione file_stat.st_size
     fread(contents, file_stat.st_size, 1, file);
     // Chiudo il file
@@ -527,6 +531,7 @@ int writeFile(const char* pathname, const char* dirname){
 
     // Invio il contenuto del file al server
     if (writen((long)client_socket, contents, file_stat.st_size) == -1) {
+        free(contents);
         return -1;
     }
 

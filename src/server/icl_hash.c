@@ -76,7 +76,10 @@ icl_hash_create(int nbuckets, unsigned int (*hash_function)(void *), int (*hash_
 
     ht->nentries = 0;
     ht->buckets = (icl_entry_t **)malloc(nbuckets * sizeof(icl_entry_t *));
-    if (!ht->buckets) return NULL;
+    if (!ht->buckets){
+        free(ht);
+        return NULL;
+    }
 
     ht->nbuckets = nbuckets;
     for (i = 0; i < ht->nbuckets; i++)
