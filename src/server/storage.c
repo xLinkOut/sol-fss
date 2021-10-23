@@ -276,9 +276,11 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int* 
                 (*victims)[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
 
                 // Elimino il file dallo storage
-                if(icl_hash_delete(storage->files, victim->name, NULL,storage_file_destroy) == -1){
+                if(icl_hash_delete(storage->files, victim->name, NULL, storage_file_destroy) == -1){
                     // Errore nella cancellazione del file
-                    printf("Errore nella cancellazione del file\n");
+                    // Annullo la selezione della vittima, e riprovo
+                    storage_file_destroy((*victims[*victims_no]));
+                    continue;
                 }
 
                 // Aggiorno le informazioni dello storage
@@ -504,9 +506,11 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
         (*victims)[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
 
         // Elimino il file dallo storage
-        if(icl_hash_delete(storage->files, victim->name, NULL,storage_file_destroy) == -1){
+        if(icl_hash_delete(storage->files, victim->name, NULL, storage_file_destroy) == -1){
             // Errore nella cancellazione del file
-            printf("Errore nella cancellazione del file\n");
+            // Annullo la selezione della vittima, e riprovo
+            storage_file_destroy((*victims[*victims_no]));
+            continue;
         }
 
         // Aggiorno le informazioni dello storage
@@ -621,9 +625,11 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
         *victims[*victims_no] = storage_file_create(victim->name, victim->contents, victim->size);
 
         // Elimino il file dallo storage
-        if(icl_hash_delete(storage->files, victim->name, NULL,storage_file_destroy) == -1){
+        if(icl_hash_delete(storage->files, victim->name, NULL, storage_file_destroy) == -1){
             // Errore nella cancellazione del file
-            printf("Errore nella cancellazione del file\n");
+            // Annullo la selezione della vittima, e riprovo
+            storage_file_destroy((*victims[*victims_no]));
+            continue;
         }
 
         // Aggiorno le informazioni dello storage
@@ -906,8 +912,7 @@ int storage_remove_file(storage_t* storage, const char* pathname, int client){
     // A questo punto, file->writer sarà pari a client, per costruzione, 
     // ovvero client ha in precedenza aperto il file in scrittura
     // Cancello quindi il file dallo storage
-    if(icl_hash_delete(storage->files, (void*) pathname, NULL,storage_file_destroy) == -1){
-        // TODO: funzione di free per file
+    if(icl_hash_delete(storage->files, (void*) pathname, NULL, storage_file_destroy) == -1){
         rwlock_done_write(storage->rwlock);    
         return -1;
     }
