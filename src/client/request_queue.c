@@ -19,10 +19,14 @@ Queue_t* queue_init() {
 void queue_destroy(Queue_t* queue) {
     // Controllo la validità degli argomenti
     if (!queue) return;
+    Request_t* request = NULL;
     // Finché ci sono elementi in coda
-    while (queue->head)
-        // Eseguo la pop e contestualmente libero la memoria
-        queue_destroy_request(queue_pop(queue));
+    while (queue->head != queue->tail){
+        // Li rimuovo
+        request = queue->head;
+        queue->head = queue->head->next;
+        queue_destroy_request(request);
+    }
     // Infine, libero la memoria della coda
     free(queue);
 }
