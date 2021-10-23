@@ -977,19 +977,17 @@ int writeDirectory(const char* pathname, int upperbound, const char* dirname) {
     DIR* dir;              // Directory corrente
     char path[PATH_MAX];   // Percorso completo
     struct dirent* entry;  // Entry all'interno della cartella
+    struct stat file_stat; // Discrimino tra file e cartelle
 
     // Apro la cartella
     if (!(dir = opendir(pathname))) return -1;
 
+
     while ((entry = readdir(dir)) != NULL) {
         snprintf(path, sizeof(path), "%s/%s", pathname, entry->d_name);
-        if (entry->d_type == DT_DIR) {
-            // E' una directory
-            // Se corrisponde a '.' oppure '..', salto
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-            // Analizzo il suo contenuto ricorsivamente
-            writeDirectory(path, upperbound, dirname);
-        } else {
+        if(stat(path, &file_stat) == -1) continue;
+
+        if (S_ISREG(file_stat.st_mode)) {
             // E' un file, lo carico sul server se non ho raggiunto il limite superiore
             if(upperbound > 0){
                 // Creo il file sul server e lo apro in scrittura
@@ -1000,6 +998,12 @@ int writeDirectory(const char* pathname, int upperbound, const char* dirname) {
                 closeFile(path);
                 upperbound--;
             }
+        } else if (S_ISDIR(file_stat.st_mode)){
+            // E' una directory
+            // Se corrisponde a '.' oppure '..', salto
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+            // Analizzo il suo contenuto ricorsivamente
+            writeDirectory(path, upperbound, dirname);
         }
     }
     // Chiudo la cartella
