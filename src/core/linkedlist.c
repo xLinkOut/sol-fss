@@ -10,7 +10,8 @@
 linked_list_t* linked_list_create() {
     linked_list_t* llist = malloc(sizeof(linked_list_t));
     if (!llist) return NULL;
-    llist->first = llist->last = NULL;
+    llist->first = NULL;
+    llist->last = NULL;
     llist->size = 0;
     return llist;
 }
@@ -61,13 +62,13 @@ bool linked_list_insert(linked_list_t* llist, int data) {
 
 bool linked_list_remove(linked_list_t* llist, int data) {
     // Controllo la validità degli argomenti
-    if (!llist || !data) {
+    if (!llist) {
         errno = EINVAL;
         return false;
     }
 
     // Controllo che la lista non sia vuota
-    if (!llist->first) {
+    if (llist->size == 0) {
         errno = ENOENT;
         return -1;
     }
@@ -79,24 +80,26 @@ bool linked_list_remove(linked_list_t* llist, int data) {
         free(head);
         // Se ho rimosso l'unico nodo della lista, aggiorno anche la coda
         if (llist->first == NULL) llist->last = NULL;
+        llist->size--;
         return true;
     }
 
     // Scorro la lista partendo dalla testa per trovare il nodo che contiene <data>
-    list_node_t* last_node = NULL;
+    list_node_t* previous_node = llist->first;
     list_node_t* current_node = llist->first->next;
 
     while (current_node) {
         if (current_node->data == data) {
             // Rimuovo il nodo
             // Aggancio il nodo precedente a quello successivo, rispetto al nodo corrente
-            if (last_node) last_node->next = current_node->next;
-            if (last_node->next == NULL) llist->last = last_node;
-            free(current_node);
+            list_node_t* node = current_node;
+            previous_node->next = current_node->next;
+            if (previous_node->next == NULL) llist->last = previous_node;
+            free(node);
             llist->size--;
             return true;
         }
-        last_node = current_node;
+        previous_node = current_node;
         current_node = current_node->next;
     }
 
