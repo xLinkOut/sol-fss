@@ -37,7 +37,7 @@ void log_event(const char* level, const char* message, ...) {
         return;
     }
     char date_time[20];
-    strftime(date_time, sizeof(date_time), "%Y-%m-%d %H:%M:%S", tm_info);
+    strftime(date_time, sizeof(date_time), "%d-%m-%Y %H:%M:%S", tm_info);
     
     // Costruisco il messaggio da scrivere nel file
     char message_buffer[MESSAGE_LENGTH];
@@ -1042,15 +1042,28 @@ int main(int argc, char* argv[]) {
     }
 
     // ! EXIT
+    // Converto il timestamp di start/shutdown in un formato leggibile
+    struct tm* tm_info;
+    char start_time[20];
+    char shutdown_time[20];
+
+    tm_info = localtime(&(storage->start_timestamp));
+    strftime(start_time, sizeof(start_time), "%d-%m-%Y %H:%M:%S", tm_info);
+
+    time_t timer = time(NULL);
+    tm_info = localtime(&timer);
+    strftime(shutdown_time, sizeof(shutdown_time), "%d-%m-%Y %H:%M:%S", tm_info);
+
     // Stampo un sommario delle operazioni effettuate
     printf(
-        "Some storage statistics:\n"
-        "+ Server start @ %ld, shutdown @ %ld\n"
+        "\nSome storage statistics:\n"
+        "+ Server start    @ %s\n"
+        "+ Server shutdown @ %s\n"
         "+ Max files stored: %zd\n"
         "+ Max space used: %zd\n"
         "+ Replacement algorithm executed %zd times\n\n"
         "+ At shutdown, these files are inside the storage:\n",
-        storage->start_timestamp, time(NULL),
+        start_time, shutdown_time,
         storage->max_files_reached, storage->max_capacity_reached,
         storage->rp_algorithm_counter
     );
