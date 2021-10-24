@@ -397,16 +397,17 @@ int main(int argc, char* argv[]) {
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
                     if (openFile(filename, O_LOCK, NULL) == -1) {
-                        perror("Error: can't open the file, skip it");
-                        // Non avendo aperto correttamente il file, evito di proseguire
-                        filename = strtok_r(NULL, ",", &strtok_status);
-                        continue;
+                        // Il file potrebbe essere stato aperto in lettura
+                        // Provo a richiedere l'accesso in scrittura tramite lockFile
+                        if(lockFile(filename) == -1){
+                            fprintf(stderr, "Error: cannot open '%s' in write mode to delete it\n", filename);
+                        }
+                    } else {
+                        if (removeFile(filename) == -1) {
+                            perror("Error: cannot delete file from storage");
+                        }
                     }
-
-                    if (removeFile(filename) == -1) {
-                        perror("Error: cannot delete file from storage");
-                    }
-
+                    // Passo al file successivo
                     filename = strtok_r(NULL, ",", &strtok_status);
                 }
                 break;
