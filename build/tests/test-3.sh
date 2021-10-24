@@ -24,6 +24,7 @@ mkdir -p $DUMMY_DIR
 mkdir -p $SAVES_DIR
 # Genero 100 dummy file, da 20 KB a 2 MB
 for i in {1..100}; do
+    echo "Generating dummy files, please wait..."
     base64 /dev/urandom | head -c $((($i * 20) * $KILOBYTE)) > $DUMMY_DIR/dummy-$i
 done
 
@@ -32,9 +33,9 @@ end=$((SECONDS + 30))
 
 # Testo tutte le operazioni implementate dal server, utilizzando più istanze client contemporaneamente
 while [ $SECONDS -lt $end ]; do
-    # Genero dieci numeri casuali, che identificheranno, ad ogni iterazione, dieci file differenti
-    for i in {1..10}; do
-        index[${i}]=$((1 + $RANDOM % 10))
+    # Genero sette numeri casuali, che identificheranno, ad ogni iterazione, dieci file differenti
+    for i in {0..7}; do
+        index[${i}]=$((1 + $RANDOM % 100))
     done;
 
     # Scrivo, leggo, blocco, cancello e sblocco alcuni file
