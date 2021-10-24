@@ -1054,19 +1054,25 @@ int main(int argc, char* argv[]) {
     tm_info = localtime(&timer);
     strftime(shutdown_time, sizeof(shutdown_time), "%d-%m-%Y %H:%M:%S", tm_info);
 
+    // Converto la dimensione massima raggiunta in MBytes
+    char* human_readable_max_space_used = calculate_size(storage->max_capacity_reached);
+
     // Stampo un sommario delle operazioni effettuate
     printf(
         "\nSome storage statistics:\n"
         "+ Server start    @ %s\n"
         "+ Server shutdown @ %s\n"
         "+ Max files stored: %zd\n"
-        "+ Max space used: %zd\n"
+        "+ Max space used: %s\n"
         "+ Replacement algorithm executed %zd times\n\n"
         "+ At shutdown, these files are inside the storage:\n",
         start_time, shutdown_time,
-        storage->max_files_reached, storage->max_capacity_reached,
+        storage->max_files_reached, human_readable_max_space_used,
         storage->rp_algorithm_counter
     );
+
+    // Libero subito la memoria
+    free(human_readable_max_space_used);
 
     // Visualizzo i file presenti nello storage al momento dell'arresto
     storage_print(storage);
