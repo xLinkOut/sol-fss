@@ -659,6 +659,10 @@ static void* worker(void* args) {
 }
 
 int main(int argc, char* argv[]) {
+
+    // Stampo il banner FSS
+    printf(FSS_SERVER_BANNER);
+    
     // ! Parametri in ingresso:
     //  * 1. <config_path>: path al file di configurazione
     //    Se non viene specificato, si assume che il file di configurazione

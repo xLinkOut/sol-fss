@@ -16,6 +16,7 @@
 // TODO: Liberare eventuale memoria prima di uscire, anche nel caso di -h
 
 void print_help() {
+    printf(FSS_CLIENT_BANNER);
     printf(
         "-h                Print this message and exit\n"
         "-p                Enable verbose mode\n"
@@ -40,6 +41,9 @@ int main(int argc, char* argv[]) {
         printf("Usage: %s [OPTIONS]...\n\nSee '%s -h' for more information\n", argv[0], argv[0]);
         return EXIT_FAILURE;
     }
+
+    // Stampo il banner FSS
+    printf(FSS_CLIENT_BANNER);
 
     // ! PARSING
     // Altrimenti, parso i parametri passati da riga di comando
