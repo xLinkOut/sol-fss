@@ -88,18 +88,21 @@ cleanall: clean
 # == TESTS
 
 test1: client server
+	rm -f $(BUILD_DIR)/fss.sk
 	valgrind --leak-check=full $(BUILD_DIR)/server $(TESTS_DIR)/config-1.txt &
 	@chmod +x $(TESTS_DIR)/test-1.sh
 	$(TESTS_DIR)/test-1.sh
 	pkill -HUP -f $(BUILD_DIR)/server
 
 test2: client server
+	rm -f $(BUILD_DIR)/fss.sk
 	$(BUILD_DIR)/server $(TESTS_DIR)/config-2.txt &
 	@chmod +x $(TESTS_DIR)/test-2.sh
 	$(TESTS_DIR)/test-2.sh
 	pkill -HUP -f $(BUILD_DIR)/server
 
 test3: client server
+	rm -f $(BUILD_DIR)/fss.sk
 	$(BUILD_DIR)/server $(TESTS_DIR)/config-3.txt &
 	@chmod +x $(TESTS_DIR)/test-3.sh
 	$(TESTS_DIR)/test-3.sh
