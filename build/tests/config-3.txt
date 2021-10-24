@@ -1,0 +1,16 @@
+# Configurazione FSS per Test n.3
+
+# Numero di threads worker
+THREADS_WORKER=8
+
+# Dimensione massima dello Storage, in Mb
+STORAGE_MAX_CAPACITY=32
+# Numero massimo di file consentiti
+STORAGE_MAX_FILES=100
+# Politica di rimpiazzamento
+REPLACEMENT_POLICY=fifo
+
+# Path al Socket file
+SOCKET_PATH=./build/fss.sk
+# Path al Log file
+LOG_PATH=./build/fss.log

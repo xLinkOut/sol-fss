@@ -99,5 +99,8 @@ test2: client server
 	$(TESTS_DIR)/test-2.sh
 	pkill -HUP -f $(BUILD_DIR)/server
 
-test3:
-
+test3: client server
+	$(BUILD_DIR)/server $(TESTS_DIR)/config-3.txt &
+	@chmod +x $(TESTS_DIR)/test-3.sh
+	$(TESTS_DIR)/test-3.sh
+	pkill -INT -f $(BUILD_DIR)/server
