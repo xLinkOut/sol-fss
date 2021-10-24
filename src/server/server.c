@@ -85,9 +85,9 @@ static void* signals_handler(void* sigset) {
         */
         case SIGINT:
         case SIGQUIT:
-            force_stop = 1;
             log_event("WARN", "SIGINT or SIGQUIT received");
             printf("Info: SIGINT or SIGQUIT received\n");
+            force_stop = 1;
             break;
 
         /*
@@ -98,9 +98,9 @@ static void* signals_handler(void* sigset) {
                 Il server terminerà solo quando tutti i client connessi chiuderanno la connessione.
         */
         case SIGHUP:
-            stop = 1;
             log_event("WARN", "SIGHUP received");
             printf("Info: SIGHUP received\n");
+            stop = 1;
             break;
 
         default:
