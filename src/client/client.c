@@ -441,5 +441,5 @@ free_and_exit:  // Salto qui solo in caso di errore, per liberare la memoria pri
     if (request) queue_destroy_request(request);
     if (request_queue) queue_destroy(request_queue);
 
-    return EXIT_SUCCESS;
+    return EXIT_CODE;
 }
