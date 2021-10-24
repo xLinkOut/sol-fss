@@ -23,6 +23,7 @@ mkdir -p $DUMMY_DIR
 # Creo la cartella in cui ospitare eventuali file espulsi/letti
 mkdir -p $SAVES_DIR
 # Genero 10 dummy file, da 100 a 1000 Kb
+echo "Generating dummy files, please wait..."
 for i in {1..10}; do
     base64 /dev/urandom | head -c $((($i * 100) * $KILOBYTE)) > $DUMMY_DIR/dummy-$i
 done
@@ -30,7 +31,7 @@ done
 # Per testare l'algoritmo di rimpiazzo, faccio molte scritture simultaneamente
 for i in {1..20}; do
     # -W: invio al server una lista di file specificati come argomento, e salvo eventuali file espulsi
-    $CLIENT -W $DUMMY_DIR/dummy-$((1 + $RANDOM % 10)),$DUMMY_DIR/dummy-$((1 + $RANDOM % 10)) -D $SAVES_DIR &
+    $CLIENT -W $DUMMY_DIR/dummy-$((1 + $RANDOM % 10)),$DUMMY_DIR/dummy-$((1 + $RANDOM % 10)),$DUMMY_DIR/dummy-$((1 + $RANDOM % 10)) -D $SAVES_DIR &
     pids[${i}]=$!
 done
 

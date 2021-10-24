@@ -23,8 +23,8 @@ mkdir -p $DUMMY_DIR
 # Creo la cartella in cui ospitare eventuali file espulsi/letti
 mkdir -p $SAVES_DIR
 # Genero 100 dummy file, da 20 KB a 2 MB
+echo "Generating dummy files, please wait..."
 for i in {1..100}; do
-    echo "Generating dummy files, please wait..."
     base64 /dev/urandom | head -c $((($i * 20) * $KILOBYTE)) > $DUMMY_DIR/dummy-$i
 done
 
