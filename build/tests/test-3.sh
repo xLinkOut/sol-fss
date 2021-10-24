@@ -52,4 +52,5 @@ while [ $SECONDS -lt $end ]; do
             -c $DUMMY_DIR/dummy-${index[4]} \
             -R n=$((1 + $RANDOM % 10)) -d $SAVES_DIR &
 
+    sleep 0.1
 done
