@@ -510,13 +510,13 @@ int writeFile(const char* pathname, const char* dirname){
 
     // Invio al server la richiesta di WRITE, il pathname e la dimensione del file
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %lld", WRITE, pathname, file_stat.st_size);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %zu", WRITE, pathname, file_stat.st_size);
     if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         fclose(file);
         return -1;
     }
 
-    if(VERBOSE) printf("Request to write %lld bytes in '%s' file...\n", file_stat.st_size, pathname);
+    if(VERBOSE) printf("Request to write %zu bytes in '%s' file...\n", file_stat.st_size, pathname);
 
     // Alloco la memoria necessaria per leggere il file
     void* contents = malloc(file_stat.st_size);
@@ -645,7 +645,7 @@ int writeFile(const char* pathname, const char* dirname){
     }
     
     if(status >= 0){
-        if (VERBOSE) printf("%lld bytes written successfully!\n", file_stat.st_size);
+        if (VERBOSE) printf("%zu bytes written successfully!\n", file_stat.st_size);
         return status;
     }
         
