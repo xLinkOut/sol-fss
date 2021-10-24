@@ -5,6 +5,8 @@
 build/*
 # Contents of 'dummy' folder
 build/tests/dummy/*
+# Contents of 'saves' folder
+build/tests/saves/*
 # Except the 'tests' folder
 !build/tests/
 
