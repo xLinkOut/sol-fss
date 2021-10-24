@@ -17,17 +17,20 @@
 
 void print_help() {
     printf(
-        "-f socketname\t \n"
-        "-w dirname[,n=0]\t \n"
-        "-W file1[,file2]\t \n"
-        "-D dirname\t \n"
-        "-r file1[,file2]\t \n"
-        "-R [n=0]\t \n"
-        "-d dirname\t \n"
-        "-t time\t \n"
-        "-l file1[,file2]\t \n"
-        "-p\t Enable verbose mode\n"
-        "-h\t Print this message and exit\n");
+        "-h                Print this message and exit\n"
+        "-p                Enable verbose mode\n"
+        "-f socketname     Specifies the socket name used by the server\n"
+        "-w dirname[,n=0]  Sends the files in the <dirname> folder to the server; <n> specifies an upper limit\n"
+        "-W file1[,file2]  Sends the specified file list to the server\n"
+        "-D dirname        Folder to save files ejected from the server, for use with -w and -W (optional)\n"
+        "-r file1[,file2]  Reads a list of files from the server\n"
+        "-R [n=0]          Reads n files from the server; if n is unspecified or zero, it reads all of them\n"
+        "-d dirname        Folder to save the files read by the -r and -R commands (optional)\n"
+        "-l file1[,file2]  Acquire the mutual exclusion of the specified file list\n"
+        "-u file1[,file2]  Releases the mutual exclusion of the specified file list\n"
+        "-c file1[,file2]  Deletes the specified file list from the server\n"
+        "-t time           Time in milliseconds between two consecutive requests (optional)\n"
+    );
 }
 
 // ! MAIN
