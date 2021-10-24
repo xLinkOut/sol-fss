@@ -159,12 +159,12 @@ int openFile(const char* pathname, int flags, const char* dirname){
             }
             // Size
             token = strtok_r(NULL, " ", &strtok_status);
-            if (!token || sscanf(token, "%zd", &victim_size) != 1) {
+            if (!token || sscanf(token, "%zu", &victim_size) != 1) {
                 errno = EBADMSG;
                 return -1;
             }
 
-            if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i+1, victim_size, victim_pathname);
+            if (VERBOSE) printf("Receiving file n.%d (%zu bytes): '%s' \n", i+1, victim_size, victim_pathname);
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
@@ -204,7 +204,7 @@ int openFile(const char* pathname, int flags, const char* dirname){
                     return -1;
                 }
                 if(fclose(output_file) == -1) return -1; 
-                if(VERBOSE) printf("%zd bytes saved to '%s'!\n", victim_size, abs_path);
+                if(VERBOSE) printf("%zu bytes saved to '%s'!\n", victim_size, abs_path);
             }
 
             free(victim_contents);
@@ -278,11 +278,11 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
     // result = 1 => file trovata e permessi ok
     token = strtok_r(NULL, " ", &strtok_status);
     size_t size_from_server = 0;
-    if (sscanf(token, "%zd", &size_from_server) != 1) {
+    if (sscanf(token, "%zu", &size_from_server) != 1) {
         return -1;
     }
     *size = size_from_server;
-    //printf("%d %zd\n", result, size_from_server);
+    //printf("%d %zu\n", result, size_from_server);
 
     // Ricevo il file dal server
     *buf = malloc(*size); // Chiamare la free di questa memoria è compito del client
@@ -319,7 +319,7 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
             return -1;
         }
         if(fclose(output_file) == -1) return -1;
-        if(VERBOSE) printf("%zd bytes saved to '%s'!\n", *size, abs_path);
+        if(VERBOSE) printf("%zu bytes saved to '%s'!\n", *size, abs_path);
     }
 
      // Leggo la risposta
@@ -336,7 +336,7 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
     }
 
     if(status >= 0){
-        if (VERBOSE) printf("Successfully read %zd bytes!\n", *size);
+        if (VERBOSE) printf("Successfully read %zu bytes!\n", *size);
         return 0;
     }
         
@@ -415,7 +415,7 @@ int readNFiles(int N, const char* dirname) {
             return -1;
         }
 
-        if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i + 1, file_size, file_pathname);
+        if (VERBOSE) printf("Receiving file n.%d (%zu bytes): '%s' \n", i + 1, file_size, file_pathname);
 
         // Alloco spazio per il file
         file_contents = malloc(file_size + 1);
@@ -470,7 +470,7 @@ int readNFiles(int N, const char* dirname) {
                 return -1;
             }
 
-            if (VERBOSE) printf("%zd bytes saved to '%s'\n", file_size, abs_path);
+            if (VERBOSE) printf("%zu bytes saved to '%s'\n", file_size, abs_path);
         }
         free(file_contents);
     }
@@ -579,12 +579,12 @@ int writeFile(const char* pathname, const char* dirname){
             }
             // Size
             token = strtok_r(NULL, " ", &strtok_status);
-            if (!token || sscanf(token, "%zd", &victim_size) != 1) {
+            if (!token || sscanf(token, "%zu", &victim_size) != 1) {
                 errno = EBADMSG;
                 return -1;
             }
 
-            if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i+1, victim_size, victim_pathname);
+            if (VERBOSE) printf("Receiving file n.%d (%zu bytes): '%s' \n", i+1, victim_size, victim_pathname);
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
@@ -624,7 +624,7 @@ int writeFile(const char* pathname, const char* dirname){
                     return -1;
                 }
                 if(fclose(output_file) == -1) return -1; 
-                if(VERBOSE) printf("%zd bytes saved to '%s'!\n", victim_size, abs_path);
+                if(VERBOSE) printf("%zu bytes saved to '%s'!\n", victim_size, abs_path);
             }
 
             free(victim_contents);
@@ -668,12 +668,12 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
     // Invio al server la richiesta di APPEND, il pathname e la dimensione del file
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %zd", APPEND, pathname, size);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %zu", APPEND, pathname, size);
     if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
 
-    if(VERBOSE) printf("Request to append %zd bytes to '%s' file...\n", size, pathname);
+    if(VERBOSE) printf("Request to append %zu bytes to '%s' file...\n", size, pathname);
     
     // Invio il contenuto del file che voglio scrivere
     if (writen((long)client_socket, buf, size) == -1) {
@@ -718,12 +718,12 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
             }
             // Size
             token = strtok_r(NULL, " ", &strtok_status);
-            if (!token || sscanf(token, "%zd", &victim_size) != 1) {
+            if (!token || sscanf(token, "%zu", &victim_size) != 1) {
                 errno = EBADMSG;
                 return -1;
             }
 
-            if (VERBOSE) printf("Receiving file n.%d (%zd bytes): '%s' \n", i+1, victim_size, victim_pathname);
+            if (VERBOSE) printf("Receiving file n.%d (%zu bytes): '%s' \n", i+1, victim_size, victim_pathname);
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
@@ -762,7 +762,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
                     return -1;
                 }
                 if(fclose(output_file) == -1) return -1; 
-                if(VERBOSE) printf("%zd bytes saved to '%s'!\n", victim_size, abs_path);
+                if(VERBOSE) printf("%zu bytes saved to '%s'!\n", victim_size, abs_path);
             }
 
             free(victim_contents);
@@ -783,7 +783,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     }
 
     if (status >= 0) {
-        if (VERBOSE) printf("%zd bytes added successfully!\n", size);
+        if (VERBOSE) printf("%zu bytes added successfully!\n", size);
         return status;
     }
 

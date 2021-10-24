@@ -221,7 +221,7 @@ static void* worker(void* args) {
                     log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
                     for(int i=0;i<victims_no;i++){
-                        printf("Sending n.%d: %s %zd\n", i+1, victims[i]->name, victims[i]->size);
+                        printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
@@ -278,7 +278,7 @@ static void* worker(void* args) {
 
                 // Invio al client il codice di ritorno e, eventualmente, la dimensione del file
                 memset(response, 0, MESSAGE_LENGTH);
-                snprintf(response, MESSAGE_LENGTH, "%d %zd", code, code == 1 ? size : 0);
+                snprintf(response, MESSAGE_LENGTH, "%d %zu", code, code == 1 ? size : 0);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
                     log_event("ERROR", "writen in read failed: (%d) ", errno);
                     break;
@@ -330,7 +330,7 @@ static void* worker(void* args) {
                 // Se presenti, invio al client i files letti
                 if (api_exit_code > 0) {
                     for (int i = 0; i < api_exit_code; i++) {
-                        printf("Sending n.%d: %s %zd\n", i + 1, files_read[i]->name, files_read[i]->size);
+                        printf("Sending n.%d: %s %zu\n", i + 1, files_read[i]->name, files_read[i]->size);
 
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
@@ -346,7 +346,7 @@ static void* worker(void* args) {
                             break;
                         }
 
-                        log_event("INFO", "[%d] READN: %d %s %zd bytes => O", thread_id, i+1, files_read[i]->name, files_read[i]->size);
+                        log_event("INFO", "[%d] READN: %d %s %zu bytes => O", thread_id, i+1, files_read[i]->name, files_read[i]->size);
 
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*)files_read[i]);
@@ -370,12 +370,12 @@ static void* worker(void* args) {
                 // Parso la dimensione del file
                 size_t file_size = 0;
                 token = strtok_r(NULL, " ", &strtok_status);
-                if (!token || sscanf(token, "%zd", &file_size) != 1) {
+                if (!token || sscanf(token, "%zu", &file_size) != 1) {
                     log_event("ERROR", "bad write request: (%d) ", errno);
                     break;
                 }
 
-                printf("WRITE: %s %zd\n", pathname, file_size);
+                printf("WRITE: %s %zu\n", pathname, file_size);
 
                 // Conosco la dimensione del file, posso allocare lo spazio necessario
                 contents = malloc(file_size); // Liberare questa memoria è compito di storage_file_destroy
@@ -409,7 +409,7 @@ static void* worker(void* args) {
                     log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
                     for(int i=0;i<victims_no;i++){
-                        printf("Sending n.%d: %s %zd\n", i+1, victims[i]->name, victims[i]->size);
+                        printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
@@ -457,12 +457,12 @@ static void* worker(void* args) {
                 // Parso la dimensione del file
                 file_size = 0;
                 token = strtok_r(NULL, " ", &strtok_status);
-                if (!token || sscanf(token, "%zd", &file_size) != 1) {
+                if (!token || sscanf(token, "%zu", &file_size) != 1) {
                     log_event("ERROR", "bad append request: (%d) ", errno);
                     break;
                 }
 
-                printf("APPEND: %s %zd\n", pathname, file_size);
+                printf("APPEND: %s %zu\n", pathname, file_size);
 
                 // Conosco la dimensione del file, posso allocare lo spazio necessario
                 contents = malloc(file_size); // Questa memoria viene liberata poco più in basso dal server
@@ -499,7 +499,7 @@ static void* worker(void* args) {
                     log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
                     for(int i=0;i<victims_no;i++){
-                        printf("Sending n.%d: %s %zd\n", i+1, victims[i]->name, victims[i]->size);
+                        printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
@@ -1062,9 +1062,9 @@ int main(int argc, char* argv[]) {
         "\nSome storage statistics:\n"
         "+ Server start    @ %s\n"
         "+ Server shutdown @ %s\n"
-        "+ Max files stored: %zd\n"
+        "+ Max files stored: %zu\n"
         "+ Max space used: %s\n"
-        "+ Replacement algorithm executed %zd times\n\n"
+        "+ Replacement algorithm executed %zu times\n\n"
         "+ At shutdown, these files are inside the storage:\n",
         start_time, shutdown_time,
         storage->max_files_reached, human_readable_max_space_used,
