@@ -13,8 +13,6 @@
 #include <utils.h>
 #include <limits.h>
 
-// TODO: Liberare eventuale memoria prima di uscire, anche nel caso di -h
-
 void print_help() {
     printf(FSS_CLIENT_BANNER);
     printf(
@@ -41,9 +39,6 @@ int main(int argc, char* argv[]) {
         printf("Usage: %s [OPTIONS]...\n\nSee '%s -h' for more information\n", argv[0], argv[0]);
         return EXIT_FAILURE;
     }
-
-    // Stampo il banner FSS
-    printf(FSS_CLIENT_BANNER);
 
     // ! PARSING
     // Altrimenti, parso i parametri passati da riga di comando
@@ -164,13 +159,19 @@ int main(int argc, char* argv[]) {
                     EXIT_CODE = EINVAL;
                     goto free_and_exit;
                 }
-                // Controllo che sia effettivamente un numero valido
-                // TODO: controllo che sia un numero >= 0
+                // Controllo che sia un numero positivo
+                if(optarg[0] == '-'){
+                    fprintf(stderr, "Error: time cannot be a negative number \n");
+                    EXIT_CODE = EINVAL;
+                    goto free_and_exit;
+                }
+                // Converto in numero
                 if (!is_number(optarg, &request->time)) {
                     fprintf(stderr, "Error: time is invalid\n");
                     EXIT_CODE = EINVAL;
                     goto free_and_exit;
                 }
+
                 break;
 
             // * Verbose
@@ -233,7 +234,8 @@ int main(int argc, char* argv[]) {
     // Metto in coda l'eventuale ultima (o unica) richiesta
     if (request) queue_push(request_queue, request);
 
-    queue_print(request_queue);  // ! Debug
+    // Stampo il banner FSS
+    if (VERBOSE) printf(FSS_CLIENT_BANNER);
 
     // * Apertura della connessione con il server
     // Tempo di attesa tra un tentativo di connessione e l'altro (1 secondo)
