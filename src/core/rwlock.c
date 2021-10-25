@@ -170,7 +170,6 @@ bool rwlock_done_write(rwlock_t* rwlock) {
 
     // Lo scrittore ha terminato, non è più attivo
     rwlock->active_writers--;
-    // ? assert(rwlock->active_writers == 0);
 
     // A questo punto, si possono verificare due scenari:
     // (a) c'è (almeno) uno scrittore in attesa, quindi lo risveglio così che possa procedere
