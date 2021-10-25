@@ -236,7 +236,7 @@ static void* worker(void* args) {
                             break;
                         }
 
-                        log_event("INFO", "[%d] VICTIM: %s %zu bytes => %c", thread_id, victims[i]->name, victims[i]->size);
+                        log_event("INFO", "[%d] VICTIM: %s %zu bytes => O", thread_id, victims[i]->name, victims[i]->size);
 
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*) victims[i]);
@@ -424,7 +424,7 @@ static void* worker(void* args) {
                             break;
                         }
 
-                        log_event("INFO", "[%d] VICTIM: %s %zu bytes => %c", thread_id, victims[i]->name, victims[i]->size);
+                        log_event("INFO", "[%d] VICTIM: %s %zu bytes => O", thread_id, victims[i]->name, victims[i]->size);
 
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*) victims[i]);
@@ -514,7 +514,7 @@ static void* worker(void* args) {
                             break;
                         }
                         
-                        log_event("INFO", "[%d] VICTIM: %s %zu bytes => %c", thread_id, victims[i]->name, victims[i]->size);
+                        log_event("INFO", "[%d] VICTIM: %s %zu bytes => O", thread_id, victims[i]->name, victims[i]->size);
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*) victims[i]);
                     }
