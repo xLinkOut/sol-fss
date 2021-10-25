@@ -48,7 +48,7 @@ while [ $SECONDS -lt $end ]; do
     # Scrivo, blocco, sovrascrivo, cancello e leggo alcuni file
     $CLIENT -W $DUMMY_DIR/dummy-${index[4]},$DUMMY_DIR/dummy-${index[5]},$DUMMY_DIR/dummy-${index[6]},$DUMMY_DIR/dummy-${index[7]} \
             -l $DUMMY_DIR/dummy-${index[4]} \
-            -w $DUMMY_DIR/dummy-${index[4]} \
+            -W $DUMMY_DIR/dummy-${index[4]} \
             -c $DUMMY_DIR/dummy-${index[4]} \
             -R n=$((1 + $RANDOM % 10)) -d $SAVES_DIR &
 
