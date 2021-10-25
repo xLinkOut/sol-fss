@@ -18,9 +18,6 @@
 #include <utils.h>
 #include <stdarg.h>
 
-// TODO: liberare la memoria prima di uscire in caso di errore
-// TODO: routine di cleanup per la chiusura su errore del server
-
 // File di log
 FILE* log_file = NULL;
 // Mutex file di log
@@ -50,7 +47,7 @@ void log_event(const char* level, const char* message, ...) {
     // Acquisisto l'accesso esclusivo sul file di log
     if(pthread_mutex_lock(&log_mutex) != 0){
         perror("Error: failed to lock log file");
-        // TODO: exit ?
+        return;
     }
     
     // Scrivo le informazioni sul file
@@ -59,11 +56,10 @@ void log_event(const char* level, const char* message, ...) {
     // Rilascio l'accesso esclusivo sul file di log
     if(pthread_mutex_unlock(&log_mutex) != 0){
         perror("Error: failed to unlock log file");
-        // TODO: exit ?
+        return;
     }
 }
 
-// TODO: spostare nel file di gestione dei segnali
 sig_atomic_t stop = 0;        // SIGHUP
 sig_atomic_t force_stop = 0;  // SIGINT e SIGQUIT
 static void* signals_handler(void* sigset) {
@@ -86,7 +82,7 @@ static void* signals_handler(void* sigset) {
         case SIGINT:
         case SIGQUIT:
             log_event("WARN", "SIGINT or SIGQUIT received");
-            printf("Info: SIGINT or SIGQUIT received\n");
+            printf("SIGINT or SIGQUIT received\n");
             force_stop = 1;
             break;
 
@@ -99,7 +95,7 @@ static void* signals_handler(void* sigset) {
         */
         case SIGHUP:
             log_event("WARN", "SIGHUP received");
-            printf("Info: SIGHUP received\n");
+            printf("SIGHUP received\n");
             stop = 1;
             break;
 
@@ -109,8 +105,6 @@ static void* signals_handler(void* sigset) {
 
     return NULL;
 }
-
-// TODO: spostare in un file per i workers
 
 // Struttura dati per passare più argomenti ai threads worker
 typedef struct worker_args {
@@ -129,18 +123,21 @@ static void* worker(void* args) {
     char request[MESSAGE_LENGTH];   // Messaggio richiesta del client
     char response[MESSAGE_LENGTH];  // Messaggio risposta del server
     char pathname[MESSAGE_LENGTH];  // Quasi ogni API call prevede un pathname
+    int thread_id = (int)pthread_self(); // ID del thread worker
+    
+    // openFile
+    int flags = 0;
+    // readFile, writeFile, appendToFile
     void* contents = NULL;
-    int thread_id = (int)pthread_self();
-    // Algoritmo di rimpiazzo
-    int victims_no = 0;
-    storage_file_t** victims = NULL;
     // readNFiles
     int N = 0;
     storage_file_t** files_read = NULL;
+    // Algoritmo di rimpiazzo
+    int victims_no = 0;
+    storage_file_t** victims = NULL;
 
     // ! MAIN WORKER LOOP
-    // TODO: condizione while, eseguo finché !force_stop, ma nel caso di stop? Come faccio a eseguire finché i client non finiscono?
-    while (1) {
+    while (1) { // Esco dal while quando viene inserito un coda il valore WORKER_EXIT
         // Recupero un file descriptor pronto dalla queue
         fd_ready = queue_pop(worker_args->task_queue);
 
@@ -160,8 +157,6 @@ static void* worker(void* args) {
         }
 
         // A questo punto sono sicuro di avere un fd valido
-        //printf("Worker on %d\n", fd_ready);
-
         // Pulisco tracce di eventuali richieste precedenti
         memset(request, 0, MESSAGE_LENGTH);
         // Leggo il contenuto della richiesta del client
@@ -172,7 +167,6 @@ static void* worker(void* args) {
 
         // * Faccio il parsing della richiesta
         // Il formato atteso è: <int:codice_richiesta> <string:parametri>[,<string:parametri>]
-        //printf("Richiesta: %s\n", request);
         // Uso lo spazio come delimitatore
         char* token = strtok_r(request, " ", &strtok_status);
         // Se scopro essere una stringa vuota, non vado oltre
@@ -195,14 +189,14 @@ static void* worker(void* args) {
                     break;
                 }
                 // Parso i flags dalla richiesta
-                int flags = 0;
+                flags = 0;
                 token = strtok_r(NULL, " ", &strtok_status);
                 if (!token || sscanf(token, "%d", &flags) != 1) {
                     log_event("ERROR", "bad open request: (%d) ", errno);
                     break;
                 }
 
-                printf("OPEN: %s %d\n", pathname, flags);
+                //printf("OPEN: %s %d\n", pathname, flags);
 
                 victims_no = 0;
                 victims = NULL;
@@ -221,7 +215,7 @@ static void* worker(void* args) {
                     log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
                     for(int i=0;i<victims_no;i++){
-                        printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
+                        //printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
@@ -263,7 +257,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                printf("READ: %s\n", pathname);
+                //printf("READ: %s\n", pathname);
                 
                 // Eseguo la API call
                 contents = NULL;
@@ -312,7 +306,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                printf("READN: %d\n", N);
+                //printf("READN: %d\n", N);
 
                 files_read = NULL;
                 // Il codice di uscita di storage_read_n_files indica
@@ -330,7 +324,7 @@ static void* worker(void* args) {
                 // Se presenti, invio al client i files letti
                 if (api_exit_code > 0) {
                     for (int i = 0; i < api_exit_code; i++) {
-                        printf("Sending n.%d: %s %zu\n", i + 1, files_read[i]->name, files_read[i]->size);
+                        //printf("Sending n.%d: %s %zu\n", i + 1, files_read[i]->name, files_read[i]->size);
 
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
@@ -375,7 +369,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                printf("WRITE: %s %zu\n", pathname, file_size);
+                //printf("WRITE: %s %zu\n", pathname, file_size);
 
                 // Conosco la dimensione del file, posso allocare lo spazio necessario
                 contents = malloc(file_size); // Liberare questa memoria è compito di storage_file_destroy
@@ -409,7 +403,7 @@ static void* worker(void* args) {
                     log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
                     for(int i=0;i<victims_no;i++){
-                        printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
+                        //printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
@@ -432,7 +426,6 @@ static void* worker(void* args) {
                 }
                 
                 if(victims) free(victims);
-                
 
                 // Preparo il buffer per la risposta
                 memset(response, 0, MESSAGE_LENGTH);
@@ -462,7 +455,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                printf("APPEND: %s %zu\n", pathname, file_size);
+                //printf("APPEND: %s %zu\n", pathname, file_size);
 
                 // Conosco la dimensione del file, posso allocare lo spazio necessario
                 contents = malloc(file_size); // Questa memoria viene liberata poco più in basso dal server
@@ -477,7 +470,6 @@ static void* worker(void* args) {
                     free(contents);
                     break;
                 }
-
 
                 // Scrivo il contenuto del file all'intero dello storage
                 victims_no = 0;
@@ -499,7 +491,7 @@ static void* worker(void* args) {
                     log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
                     for(int i=0;i<victims_no;i++){
-                        printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
+                        //printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
                         snprintf(response, MESSAGE_LENGTH, "%s %zu", victims[i]->name, victims[i]->size);
@@ -515,6 +507,7 @@ static void* worker(void* args) {
                         }
                         
                         log_event("INFO", "[%d] VICTIM: %s %zu bytes => O", thread_id, victims[i]->name, victims[i]->size);
+                        
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*) victims[i]);
                     }
@@ -540,7 +533,7 @@ static void* worker(void* args) {
                     break;
                 }
                 
-                printf("LOCK %s\n", pathname);
+                //printf("LOCK %s\n", pathname);
 
                 // Eseguo la API call
                 api_exit_code = storage_lock_file(worker_args->storage, pathname, fd_ready);
@@ -565,7 +558,7 @@ static void* worker(void* args) {
                     break;
                 }
                 
-                printf("UNLOCK %s\n", pathname);
+                //printf("UNLOCK %s\n", pathname);
 
                 // Eseguo la API call
                 api_exit_code = storage_unlock_file(worker_args->storage, pathname, fd_ready);
@@ -590,7 +583,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                printf("CLOSE: %s\n", pathname);
+                //printf("CLOSE: %s\n", pathname);
 
                 // Eseguo la API call
                 api_exit_code = storage_close_file(worker_args->storage, pathname, fd_ready);
@@ -614,7 +607,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                printf("REMOVE: %s\n", pathname);
+                //printf("REMOVE: %s\n", pathname);
 
                 // Eseguo la API call
                 api_exit_code = storage_remove_file(worker_args->storage, pathname, fd_ready);
@@ -815,8 +808,6 @@ int main(int argc, char* argv[]) {
 #endif
 
     // ! LOG FILE
-    // * Si è scelto di non sovrascrivere un eventuale file di log già esistente
-    // Ogni sessione del server è racchiusa tra due righe di bootstrap/shutdown
     if ((log_file = fopen(LOG_PATH, "w")) == NULL) {
         perror("Error: failed to open log file");
         return errno;
@@ -848,20 +839,18 @@ int main(int argc, char* argv[]) {
     struct sigaction sig_action;
     // Inizializzo la struttura
     memset(&sig_action, 0, sizeof(sig_action));
-    // Imposto l'handler su SIG_IGN, per ignorare l'arrivo dei segnali
+    // Imposto l'handler su SIG_IGN
     sig_action.sa_handler = SIG_IGN;
-    // Imposto la maschera dei segnali creata precedentemente, per mascherare l'arrivo
-    // di SIGINT, SIGQUIT e SIGHUP durante la gestione di altri segnali
+    // Imposto la maschera dei segnali creata precedentemente
     sig_action.sa_mask = sigset;
-    // Ignoro il segnale SIGPIPE, per prevenire crash del server
-    // in caso di scrittura su pipe che sono state chiuse
+    // Ignoro il segnale SIGPIPE
     if (sigaction(SIGPIPE, &sig_action, NULL) != 0) {
         perror("Error: failed to install signal handler for SIGPIPE with sigaction");
         return errno;
     }
 
-    // Per la gestione di tutti gli altri segnali indicati in sigset, utilizzo un thread specializzato
-    if (pthread_sigmask(SIG_BLOCK, &sigset, NULL) != 0) {  // ? Oppure SIG_SETMASK?
+    // Per la gestione dei segnali indicati in sigset, utilizzo un thread specializzato
+    if (pthread_sigmask(SIG_BLOCK, &sigset, NULL) != 0) {
         perror("Error: failed to set signal mask for signals handler thread");
         return errno;
     }
@@ -880,7 +869,7 @@ int main(int argc, char* argv[]) {
     memset(&socket_address, '0', sizeof(socket_address));
     socket_address.sun_family = AF_UNIX;
     // Imposto come path quello del socket preso dal file di configurazione
-    strcpy(socket_address.sun_path, SOCKET_PATH);  // TODO: strncpy
+    strcpy(socket_address.sun_path, SOCKET_PATH);
 
     // Creo il socket lato server, che accetterà nuove connessioni
     int server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -939,7 +928,7 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "Error: failed to start worker thread (%d)\n", i);
             return EXIT_FAILURE;
         }
-        printf("Info: worker thread (%d) started\n", i);
+        //printf("Info: worker thread (%d) started\n", i);
     }
 
     printf("Info: thread pool initialized\n");
@@ -1006,7 +995,6 @@ int main(int argc, char* argv[]) {
                     if (client_socket > fd_num) fd_num = client_socket;
                     // Aggiorno il contatore dei clients attivi
                     active_clients++;
-                    //printf("Active clients: %d\n", active_clients);
                     log_event("INFO", "[000000000] CLIENT: %d connected", client_socket);
 
                 } else if (fd == pipe_workers[0]) {
@@ -1026,7 +1014,6 @@ int main(int argc, char* argv[]) {
                         FD_SET(pipe_message, &set);
                         if (pipe_message > fd_num) fd_num = pipe_message;
                     }
-                    //printf("Active clients: %d\n", active_clients);
 
                 } else {
                     // * Nuovo task da parte di un client connesso
@@ -1035,7 +1022,6 @@ int main(int argc, char* argv[]) {
                     // Rimuovo il descrittore dal ready set
                     FD_CLR(fd, &set);
                     //if(fd == fd_num) fd_num--;
-                    //log_event("INFO", "Client %d has added a new task to the processing queue", fd);
                 }
             }
         }
