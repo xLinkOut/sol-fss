@@ -328,6 +328,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int* 
         // Aggiorno le informazioni dello storage
         storage->number_of_files++; // Incremento il numero di file presenti nello storage
         storage->max_files_reached = MAX(storage->max_files_reached, storage->number_of_files);
+        if(*victims_no > 0) storage->rp_algorithm_counter++;
         //printf("Lo storage contiene %d files\n", storage->number_of_files);
 
         // ! DEBUG
@@ -634,8 +635,6 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
             // Incremento il numero dei file espulsi
             (*victims_no)++;
         }
-
-
     }
 
     // Rilascio l'accesso in lettura sul file
@@ -666,6 +665,7 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
     // Aggiorno le informazioni dello storage
     storage->capacity += size; // Sommo la dimensione del contenuto aggiunto
     storage->max_capacity_reached = MAX(storage->max_capacity_reached, storage->capacity);
+    if(*victims_no > 0) storage->rp_algorithm_counter++;
     //printf("Lo storage occupa %d bytes\n", storage->capacity);
 
     // Rilascio l'accesso in scrittura sullo storage
