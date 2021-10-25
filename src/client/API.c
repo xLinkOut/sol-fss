@@ -259,13 +259,16 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
     if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
         return -1;
     }
+
+    int result = 0;
     char* strtok_status = NULL;
     char* token = strtok_r(message_buffer, " ", &strtok_status);
+    
     if (!token) return -1;
-    int result = 0;
     if (sscanf(token, "%d", &result) != 1) {
         return -1;
     }
+    
     if(result == 0){
         if (VERBOSE) printf("Something went wrong!\n");
         errno = ENOENT;
@@ -322,26 +325,8 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
         if(VERBOSE) printf("%zu bytes saved to '%s'!\n", *size, abs_path);
     }
 
-     // Leggo la risposta
-    memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
-        return -1;
-    }
-
-    // Interpreto (il codice del)la risposta ricevuta
-    int status;
-    if(sscanf(message_buffer, "%d", &status) != 1){
-        errno = EBADMSG;
-        return -1;
-    }
-
-    if(status >= 0){
-        if (VERBOSE) printf("Successfully read %zu bytes!\n", *size);
-        return 0;
-    }
-        
-    if (VERBOSE) printf("Something went wrong!\n");
-    return status;
+    if (VERBOSE) printf("Successfully read %zu bytes!\n", *size);
+    return 0;
 }
 
 int readNFiles(int N, const char* dirname) {

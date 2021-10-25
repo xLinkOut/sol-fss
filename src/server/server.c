@@ -287,14 +287,6 @@ static void* worker(void* args) {
                 // Libero la memoria occupata per leggere il file
                 free(contents);
 
-                // TODO: fix this, usare direttamente code come codice risposta
-                memset(response, 0, MESSAGE_LENGTH);
-                snprintf(response, MESSAGE_LENGTH, "%d", 0);
-                if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
-                    log_event("ERROR", "writen in read failed: (%d) ", errno);
-                    break;
-                }
-
                 log_event("INFO", "[%d] READ: %s %zu bytes => %c", thread_id, pathname, size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
