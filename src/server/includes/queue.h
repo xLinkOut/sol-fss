@@ -30,7 +30,7 @@ void queue_destroy(queue_t* queue);
 int queue_push(queue_t* queue, int data);
 
 // * Estrae un fd dalla coda
-// ! Files descriptor validi sono interi non-negativi
+// ! File descriptors validi sono interi non-negativi
 // Il valore -1 viene interpretato dal thread worker come segnale di terminazione da parte del dispatcher
 // Il valore -2 viene interpretato come errore della funzione queue_pop
 // Qualsiasi altro valore negativo è interpretato dal thread worker come invalido

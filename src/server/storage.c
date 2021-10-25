@@ -245,9 +245,6 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int* 
         file->last_use_time = time(NULL);
         file->frequency++;
 
-        // ! DEBUG
-        storage_file_print(file); // Stampo alcune informazioni sul file
-
         // Ho terminato, rilascio le lock acquisite
         rwlock_done_write(file->rwlock);
         rwlock_done_read(storage->rwlock);
@@ -279,7 +276,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int* 
                 if(icl_hash_delete(storage->files, victim->name, NULL, storage_file_destroy) == -1){
                     // Errore nella cancellazione del file
                     // Annullo la selezione della vittima, e riprovo
-                    storage_file_destroy((*victims[*victims_no]));
+                    storage_file_destroy(((*victims)[*victims_no]));
                     continue;
                 }
 
@@ -294,7 +291,6 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int* 
 
         // Rilascio l'accesso in lettura sullo storage
         rwlock_done_read(storage->rwlock);
-        // TODO: metodo per switchare read<->write lock atomicamente
         // Acquisisco l'accesso in scrittura sullo storage
         rwlock_start_write(storage->rwlock);
 
@@ -302,7 +298,7 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int* 
         file = storage_file_create(pathname, NULL, 0);
 
         // * Non è necessario richiedere l'accesso in scrittura sul file 
-        //    perché non può essere ancora utilizzato da altri client
+        // *  perché non può essere ancora utilizzato da altri client
 
         // Lo apro in lettura per il client
         if(!linked_list_insert(file->readers, client)){
@@ -329,11 +325,6 @@ int storage_open_file(storage_t* storage, const char* pathname, int flags, int* 
         storage->number_of_files++; // Incremento il numero di file presenti nello storage
         storage->max_files_reached = MAX(storage->max_files_reached, storage->number_of_files);
         if(*victims_no > 0) storage->rp_algorithm_counter++;
-        //printf("Lo storage contiene %d files\n", storage->number_of_files);
-
-        // ! DEBUG
-        //storage_file_print(file); // Stampo alcune informazioni sul file
-        //icl_hash_dump(stdout, storage->files); // Stampo il contenuto dello storage
 
         // Rilascio l'accesso in scrittura sullo storage
         rwlock_done_write(storage->rwlock);
@@ -506,7 +497,7 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
             if(icl_hash_delete(storage->files, victim->name, NULL, storage_file_destroy) == -1){
                 // Errore nella cancellazione del file
                 // Annullo la selezione della vittima, e riprovo
-                storage_file_destroy((*victims[*victims_no]));
+                storage_file_destroy(((*victims)[*victims_no]));
                 continue;
             }
 
@@ -519,7 +510,6 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
         }
 
     }
-
 
     // Rilascio l'accesso in lettura sul file
     rwlock_done_read(file->rwlock);
@@ -551,7 +541,6 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
     storage->capacity = (storage->capacity - old_size) + size;
     storage->max_capacity_reached = MAX(storage->max_capacity_reached, storage->capacity);
     if(*victims_no > 0) storage->rp_algorithm_counter++;
-    //printf("Lo storage occupa %d bytes\n", storage->capacity);
 
     // Rilascio l'accesso in scrittura sullo storage
     rwlock_done_write(storage->rwlock);
@@ -623,7 +612,7 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
             if(icl_hash_delete(storage->files, victim->name, NULL, storage_file_destroy) == -1){
                 // Errore nella cancellazione del file
                 // Annullo la selezione della vittima, e riprovo
-                storage_file_destroy((*victims[*victims_no]));
+                storage_file_destroy(((*victims)[*victims_no]));
                 continue;
             }
 
@@ -665,7 +654,6 @@ int storage_append_to_file(storage_t* storage, const char* pathname, const void*
     storage->capacity += size; // Sommo la dimensione del contenuto aggiunto
     storage->max_capacity_reached = MAX(storage->max_capacity_reached, storage->capacity);
     if(*victims_no > 0) storage->rp_algorithm_counter++;
-    //printf("Lo storage occupa %d bytes\n", storage->capacity);
 
     // Rilascio l'accesso in scrittura sullo storage
     rwlock_done_write(storage->rwlock);
@@ -830,7 +818,6 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
     rwlock_start_write(file->rwlock);
 
     // Chiudo il file in scrittura per il client, se era stato aperto con questa modalità
-    // TODO: chiamare internamente la unlockFile ?
     if (file->writer != 0 && file->writer == client) file->writer = 0;
 
     // Chiudo il file in lettura per il client
@@ -844,13 +831,10 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
     // Aggioro le statistiche del file
     file->last_use_time = time(NULL);
     file->frequency++;
-    
-    //storage_file_print(file); // ! Debug
 
     // Rilascio l'accesso in scrittura sul file
     rwlock_done_write(file->rwlock);
     // Rilascio l'accesso in lettura sullo storage
-    // TODO: è possibile rilasciarlo anche prima ?
     rwlock_done_read(storage->rwlock);
 
     return 0;
@@ -906,13 +890,9 @@ int storage_remove_file(storage_t* storage, const char* pathname, int client){
         return -1;
     }
     
-    //icl_hash_dump(stdout, storage->files);
-
     // Aggiorno le informazioni dello storage
     storage->number_of_files--; // Decremento il numero di file nello storage
     storage->capacity -= old_size; // Libero lo spazio occupato dal file rimosso
-    //printf("Lo storage contiene %d files\n", storage->number_of_files);
-    //printf("Lo storage occupa %d bytes\n", storage->capacity);
 
     // Rilascio l'accesso in scrittura sul file
     rwlock_done_write(storage->rwlock);

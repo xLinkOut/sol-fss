@@ -11,7 +11,7 @@ queue_t* queue_init() {
     // Alloco memoria per la coda
     queue_t* queue = malloc(sizeof(queue_t));
     if (!queue){
-        perror("Error: failed to allocate memory for queue");
+        //perror("Error: failed to allocate memory for queue");
         return NULL;
     }
 
@@ -23,16 +23,14 @@ queue_t* queue_init() {
 
     // Inizializzo il nodo di testa
     queue->head->next = NULL;
-
     // Imposto il nodo in coda uguale a quello di testa, la coda è vuota
     queue->tail = queue->head;
-
     // Imposto la lunghezza della coda a zero, attualmente è vuota
     queue->length = 0;
 
-    // Inizializzo l'ccesso mutualmente esclusivo
+    // Inizializzo l'accesso mutualmente esclusivo
     if (pthread_mutex_init(&queue->mutex, NULL) != 0) {
-        perror("Error: unable to init Queue mutex");
+        //perror("Error: unable to init Queue mutex");
         free(queue->head);
         free(queue);
         return NULL;
@@ -40,7 +38,7 @@ queue_t* queue_init() {
 
     // Inizializzo la variabile di condizione 'Coda vuota'
     if (pthread_cond_init(&queue->empty, NULL) != 0) {
-        perror("Error: unable to init Queue empty condition variable");
+        //perror("Error: unable to init Queue empty condition variable");
         pthread_mutex_destroy(&queue->mutex);
         free(queue->head);
         free(queue);
@@ -110,7 +108,6 @@ int queue_pop(queue_t* queue) {
     // * A questo punto ho riacquisito la lock sulla coda
     // Tuttavia, è buona prassi controllare che sia effettivamente
     // stato aggiunto un nuovo nodo, altrimenti ritorno
-    // ? Troppo drastico utilizzare assert() ?
     if (!queue->head->next) return -2;
 
     // Preparo l'occorrente per estrarre il nodo dalla coda
@@ -118,9 +115,9 @@ int queue_pop(queue_t* queue) {
     int fd_ready = (queue->head->next)->fd_ready;
     queue->head = queue->head->next;
     queue->length--;
-    // ? Controllare che length sia >= 0 ?
-    UNLOCK(&queue->mutex);
 
+    UNLOCK(&queue->mutex);
     free(node);
+
     return fd_ready;
 }

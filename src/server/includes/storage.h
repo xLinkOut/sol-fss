@@ -33,11 +33,13 @@ typedef struct Storage {
         1. più lettori attivi contemporaneamente, ma nessuno scrittore, oppure
         2. un solo scrittore attivo, e nessun lettore.
     
-    Il lock in lettura si ottiene sempre e solo con l'apertura del file tramite la chiamata openFile senza nessun flag,
-        oppure con il solo flag O_CREATE, e si rilascia con la conseguente chiusura del file tramite la chiamata closeFile.
+    Il lock in lettura si ottiene con l'apertura del file tramite la chiamata openFile con il flag O_READ,
+        oppure come conseguenza della creazione del file con il flag O_CREATE, o ancora implicitamente 
+        a seguito dell'apertura in modalità scrittura, specificando il flag O_LOCK;
+        si rilascia con la chiusura del file tramite la chiamata closeFile.
     
     Il lock in scrittura si ottiene in due modi diversi:
-        1. implicitamente, con la chiamata openFile specificando (eventualmente in OR) il flag O_LOCK, oppure
+        1. con la chiamata openFile specificando (eventualmente in OR) il flag O_LOCK, oppure
         2. esplicitamente, tramite la chiamata lockFile;
     e si rilascia in due modi diversi (in maniera duale all'acquisizione):
         1. implicitamente, tramite la chiamata closeFile, che rilascia contemporaneamente lock in lettura e scrittura, oppure
@@ -82,7 +84,7 @@ void storage_file_destroy(void* file);
 // * Crea e/o apre il file <pathname> in lettura ed eventualmente in scrittura, in accordo a <flags>
 int storage_open_file(storage_t* storage, const char* pathname, int flags, int* victims_no, storage_file_t*** victims, int client);
 
-// * Legge il file <pathname> dallo storage
+// * Legge il file <pathname> dallo storage, copiando il suo contenuto in <contents>
 int storage_read_file(storage_t* storage, const char* pathname, void** contents, size_t* size, int client);
 
 // * Legge dallo storage <n> files e li invia al client
@@ -95,7 +97,6 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
 int storage_append_to_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client);
 
 // * Imposta il lock in scrittura sul file <pathname> per <client>
-// * Se il file è già lockato da un altro client, aspetta che questo lo rilasci
 int storage_lock_file(storage_t* storage, const char* pathname, int client);
 
 // * Rilascia il lock in scrittura del file <pathname> per <client>
@@ -104,7 +105,7 @@ int storage_unlock_file(storage_t* storage, const char* pathname, int client);
 // * Chiude il file <pathname> aperto in precedenza con storage_open_file da <client>
 int storage_close_file(storage_t* storage, const char* pathname, int client);
 
-// * Cancella il file <pathname> dallo storage, se è stato lockato dal client
+// * Cancella il file <pathname> dallo storage, se è stato aperto in scrittura da <client>
 int storage_remove_file(storage_t* storage, const char* pathname, int client);
 
 #endif
