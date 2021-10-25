@@ -41,8 +41,7 @@ int unlockFile(const char* pathname);
 // * Richiede la chiusura del file <pathname> precedentemente aperto con openFile
 int closeFile(const char* pathname);
 
-// * Rimuovere il file <pathname> cancellandolo dallo storage
-// * Richiede che il file sia stato aperto in scrittura
+// * Rimuove il file <pathname> cancellandolo dallo storage
 int removeFile(const char* pathname);
 
 // * Wrapper utilizzato per caricare il contenuto di una cartella sul server

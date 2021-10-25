@@ -40,7 +40,6 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
     memset(&socket_address, '0', sizeof(socket_address));
     socket_address.sun_family = AF_UNIX;
     // Imposto come path quello del socket passato come argomento
-    // TODO: controlli su SOCKET_PATH; strncpy
     strcpy(socket_address.sun_path, sockname);
 
     // Creo il socket lato client, che si connetterà al server
@@ -268,9 +267,11 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
         return -1;
     }
     if(result == 0){
+        if (VERBOSE) printf("Something went wrong!\n");
         errno = ENOENT;
         return -1;
     }else if(result == -1){
+        if (VERBOSE) printf("Something went wrong!\n");
         errno = EPERM;
         return -1;
     }
@@ -282,7 +283,6 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
         return -1;
     }
     *size = size_from_server;
-    //printf("%d %zu\n", result, size_from_server);
 
     // Ricevo il file dal server
     *buf = malloc(*size); // Chiamare la free di questa memoria è compito del client
@@ -601,7 +601,7 @@ int writeFile(const char* pathname, const char* dirname){
                 // Creo il path completo per il salvataggio del file
                 // Calcolo la lunghezza del path indicato da dirname
                 size_t dirname_length = strlen(dirname);
-                char abs_path[PATH_MAX]; // => dirname/victim_pathname, // TODO: MAX_PATH in linux/limits.h
+                char abs_path[PATH_MAX]; // => dirname/victim_pathname
                 memset(abs_path, 0, PATH_MAX);
                 
                 // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
