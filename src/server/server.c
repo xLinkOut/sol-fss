@@ -127,7 +127,8 @@ static void* worker(void* args) {
     
     // openFile
     int flags = 0;
-    // readFile, writeFile, appendToFile
+    // readFile, writeFile, appendToFile, removeFile
+    size_t size = 0;
     void* contents = NULL;
     // readNFiles
     int N = 0;
@@ -261,7 +262,7 @@ static void* worker(void* args) {
                 
                 // Eseguo la API call
                 contents = NULL;
-                size_t size = 0;
+                size = 0;
                 api_exit_code = storage_read_file(worker_args->storage, pathname, &contents, &size, fd_ready);
                 
                 int code = 1;
@@ -600,9 +601,9 @@ static void* worker(void* args) {
                 }
 
                 //printf("REMOVE: %s\n", pathname);
-
+                size = 0;
                 // Eseguo la API call
-                api_exit_code = storage_remove_file(worker_args->storage, pathname, fd_ready);
+                api_exit_code = storage_remove_file(worker_args->storage, pathname, &size, fd_ready);
                 // Preparo il buffer per la risposta
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
@@ -611,7 +612,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "[%d] REMOVE: %s => %c", thread_id, pathname, api_exit_code == 0 ? 'O' : 'X');
+                log_event("INFO", "[%d] REMOVE: %s %zu => %c", thread_id, pathname, size, api_exit_code == 0 ? 'O' : 'X');
                 break;
                 
             case DISCONNECT:  // ! closeConnection

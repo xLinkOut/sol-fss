@@ -840,7 +840,7 @@ int storage_close_file(storage_t* storage, const char* pathname, int client) {
     return 0;
 }
 
-int storage_remove_file(storage_t* storage, const char* pathname, int client){
+int storage_remove_file(storage_t* storage, const char* pathname, size_t* size, int client){
     // Controllo la validità degli argomenti
     if (!storage || !pathname) {
         errno = EINVAL;
@@ -874,6 +874,8 @@ int storage_remove_file(storage_t* storage, const char* pathname, int client){
     
     // Usata in fondo per aggiornare le informazioni dello storage
     size_t old_size = file->size;
+    // Utilizzata dal server ai fini di logging
+    *size = old_size;
 
     // Rilascio l'accesso in lettura sullo storage
     rwlock_done_read(storage->rwlock);

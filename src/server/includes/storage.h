@@ -106,6 +106,6 @@ int storage_unlock_file(storage_t* storage, const char* pathname, int client);
 int storage_close_file(storage_t* storage, const char* pathname, int client);
 
 // * Cancella il file <pathname> dallo storage, se è stato aperto in scrittura da <client>
-int storage_remove_file(storage_t* storage, const char* pathname, int client);
+int storage_remove_file(storage_t* storage, const char* pathname, size_t* size, int client);
 
 #endif
