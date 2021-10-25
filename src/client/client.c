@@ -263,9 +263,7 @@ int main(int argc, char* argv[]) {
     char* pathname = NULL;
     long upperbound = INT_MAX;
 
-
     while ((request = queue_pop(request_queue))) {
-        printf("%c %s (%s, %lu)\n", request->command, request->arguments, request->dirname, request->time);
         switch (request->command) {
             case 'w':  // Invio al server il contenuto di una cartella
                 // Viene specificato il path ad una cartella, ed un parametro <n> opzionale
@@ -301,12 +299,15 @@ int main(int argc, char* argv[]) {
             case 'W':  // Invio al server un(a lista di) file
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
-                while (filename) {
+                while (filename) { 
                     if (openFile(filename, O_CREATE | O_LOCK, request->dirname) == -1) {
-                        perror("Error: can't open the file, skip it");
-                        // Non avendo aperto correttamente il file, evito di proseguire
-                        filename = strtok_r(NULL, ",", &strtok_status);
-                        continue;
+                        // E' possibile sovrascrivere un file, riprovo ad aprirlo solamente in scrittura
+                        if (openFile(filename, O_LOCK, NULL) == -1){
+                            // Non avendo aperto correttamente il file in scrittura, evito di proseguire
+                            perror("Error: cannot open the file");
+                            filename = strtok_r(NULL, ",", &strtok_status);
+                            continue;
+                        }
                     }
 
                     if (writeFile(filename, request->dirname) == -1) {
@@ -350,12 +351,10 @@ int main(int argc, char* argv[]) {
                     perror("Error: bad request");
                     break;
                 }
-
                 if(!(token = strtok_r(NULL, "=", &strtok_status))){
                     perror("Error: bad request");
                     break;
                 }
-
                 if(!is_number(token, &N)){
                     perror("Error: bad request");
                     break;
@@ -402,7 +401,7 @@ int main(int argc, char* argv[]) {
                         // Il file potrebbe essere stato aperto in lettura
                         // Provo a richiedere l'accesso in scrittura tramite lockFile
                         if(lockFile(filename) == -1){
-                            fprintf(stderr, "Error: cannot open '%s' in write mode to delete it\n", filename);
+                            perror("Error: cannot open file in write mode to delete it");
                         }
                     } else {
                         if (removeFile(filename) == -1) {
