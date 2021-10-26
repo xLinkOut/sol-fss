@@ -21,7 +21,7 @@ void queue_destroy(queue_t* queue) {
     if (!queue) return;
     request_t* request = NULL;
     // Finché ci sono elementi in coda
-    while (queue->head != queue->tail){
+    while (queue->head != queue->tail) {
         // Li rimuovo
         request = queue->head;
         queue->head = queue->head->next;
@@ -88,18 +88,18 @@ void queue_destroy_request(request_t* request) {
     free(request);
 }
 
-void queue_print(queue_t* queue){
+void queue_print(queue_t* queue) {
     // Controllo la validità degli argomenti
-    if(!queue) return;
+    if (!queue) return;
     // Salvo un puntatore alla testa della lista
     request_t* scan = queue->head;
     // Inizializzo un contatore per maggiore leggibilità
     int counter = 0;
     // Finché non raggiungo la fine della coda
-    while(scan){
+    while (scan) {
         // Stampo le informazioni della richiesta
         printf("[%d]: <%c, %s, %s, %lu>\n",
-        counter++, scan->command, scan->arguments, scan->dirname, scan->time);
+               counter++, scan->command, scan->arguments, scan->dirname, scan->time);
         // Passo alla richiesta successiva
         scan = scan->next;
     }

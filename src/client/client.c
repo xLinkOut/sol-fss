@@ -4,6 +4,7 @@
 #include <constants.h>
 #include <errno.h>
 #include <getopt.h>
+#include <limits.h>
 #include <request_queue.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -11,7 +12,6 @@
 #include <string.h>
 #include <time.h>
 #include <utils.h>
-#include <limits.h>
 
 void print_help() {
     printf(FSS_CLIENT_BANNER);
@@ -28,8 +28,7 @@ void print_help() {
         "-l file1[,file2]  Acquire the mutual exclusion of the specified file list\n"
         "-u file1[,file2]  Releases the mutual exclusion of the specified file list\n"
         "-c file1[,file2]  Deletes the specified file list from the server\n"
-        "-t time           Time in milliseconds between two consecutive requests (optional)\n"
-    );
+        "-t time           Time in milliseconds between two consecutive requests (optional)\n");
 }
 
 // ! MAIN
@@ -160,7 +159,7 @@ int main(int argc, char* argv[]) {
                     goto free_and_exit;
                 }
                 // Controllo che sia un numero positivo
-                if(optarg[0] == '-'){
+                if (optarg[0] == '-') {
                     fprintf(stderr, "Error: time cannot be a negative number \n");
                     EXIT_CODE = EINVAL;
                     goto free_and_exit;
@@ -259,7 +258,7 @@ int main(int argc, char* argv[]) {
     size_t size = 0;
     // readNFiles (-R)
     long N = 0;
-    // writeDirectory (-w) 
+    // writeDirectory (-w)
     char* pathname = NULL;
     long upperbound = INT_MAX;
 
@@ -299,10 +298,10 @@ int main(int argc, char* argv[]) {
             case 'W':  // Invio al server un(a lista di) file
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
-                while (filename) { 
+                while (filename) {
                     if (openFile(filename, O_CREATE | O_LOCK, request->dirname) == -1) {
                         // E' possibile sovrascrivere un file, riprovo ad aprirlo solamente in scrittura
-                        if (openFile(filename, O_LOCK, NULL) == -1){
+                        if (openFile(filename, O_LOCK, NULL) == -1) {
                             // Non avendo aperto correttamente il file in scrittura, evito di proseguire
                             perror("Error: cannot open the file");
                             filename = strtok_r(NULL, ",", &strtok_status);
@@ -321,8 +320,8 @@ int main(int argc, char* argv[]) {
                     filename = strtok_r(NULL, ",", &strtok_status);
                 }
                 break;
-            
-            case 'r': // Leggo dal server un(a lista di) file
+
+            case 'r':  // Leggo dal server un(a lista di) file
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
@@ -345,29 +344,29 @@ int main(int argc, char* argv[]) {
                 }
                 break;
 
-            case 'R': // Leggo dal server un certo numero di files qualsiasi
+            case 'R':  // Leggo dal server un certo numero di files qualsiasi
                 // Parso il numero di file da leggere
-                if(!(token = strtok_r(request->arguments, "=", &strtok_status))){
+                if (!(token = strtok_r(request->arguments, "=", &strtok_status))) {
                     perror("Error: bad request");
                     break;
                 }
-                if(!(token = strtok_r(NULL, "=", &strtok_status))){
+                if (!(token = strtok_r(NULL, "=", &strtok_status))) {
                     perror("Error: bad request");
                     break;
                 }
-                if(!is_number(token, &N)){
+                if (!is_number(token, &N)) {
                     perror("Error: bad request");
                     break;
                 }
-                
-                if(readNFiles(N, request->dirname) == -1){
+
+                if (readNFiles(N, request->dirname) == -1) {
                     perror("Error: failed to read N files");
                     break;
                 }
 
                 break;
 
-            case 'l': // Acquisisco la mutua esclusione su un(a lista di) file
+            case 'l':  // Acquisisco la mutua esclusione su un(a lista di) file
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
@@ -381,7 +380,7 @@ int main(int argc, char* argv[]) {
                 }
                 break;
 
-            case 'u': // Rilascio la mutua esclusione su un(a lista di) file
+            case 'u':  // Rilascio la mutua esclusione su un(a lista di) file
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
@@ -393,14 +392,14 @@ int main(int argc, char* argv[]) {
                 }
                 break;
 
-            case 'c': // Rimuovo dallo storage un(a lista di) file
+            case 'c':  // Rimuovo dallo storage un(a lista di) file
                 // Possono essere specificati più file separati da virgola
                 filename = strtok_r(request->arguments, ",", &strtok_status);
                 while (filename) {
                     if (openFile(filename, O_LOCK, NULL) == -1) {
                         // Il file potrebbe essere stato aperto in lettura
                         // Provo a richiedere l'accesso in scrittura tramite lockFile
-                        if(lockFile(filename) == -1){
+                        if (lockFile(filename) == -1) {
                             perror("Error: cannot open file in write mode to delete it");
                         }
                     } else {
@@ -415,7 +414,7 @@ int main(int argc, char* argv[]) {
         }
 
         // Se -t è stato specificato, mi fermo per il tempo specificato tra una richiesta e la successiva
-        if (request->time > 0 && request_queue->length != 0) { // Tuttavia, non aspetto se non ci sono ci sono più richieste da elaborare
+        if (request->time > 0 && request_queue->length != 0) {  // Tuttavia, non aspetto se non ci sono ci sono più richieste da elaborare
             // Struttura dati per la nanosleep
             struct timespec sleep_time = {
                 .tv_sec = request->time >= 1000 ? request->time / 1000 : 0,    // Se l'attesa è maggiore di un secondo, uso proprio i secondi come misura

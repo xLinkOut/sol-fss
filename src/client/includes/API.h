@@ -3,8 +3,8 @@
 #ifndef _API_H_
 #define _API_H_
 
-#include <time.h>
 #include <stdbool.h>
+#include <time.h>
 
 // Modalità verbose
 bool VERBOSE;

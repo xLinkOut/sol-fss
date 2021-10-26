@@ -1,19 +1,18 @@
 // @author Luca Cirillo (545480)
 
 #include <API.h>
+#include <constants.h>
+#include <dirent.h>
 #include <errno.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/un.h>
-#include <utils.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <constants.h>
 #include <sys/stat.h>
-#include <stdbool.h>
 #include <sys/types.h>
-#include <dirent.h>
-#include <stdio.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <utils.h>
 
 // Imposto il socket con un valore negativo, e.g. 'non connesso'
 int client_socket = -1;
@@ -64,9 +63,9 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
     return connect_status;
 }
 
-int closeConnection(const char* sockname){
+int closeConnection(const char* sockname) {
     // Controllo la validità degli argomenti
-    if(!sockname){
+    if (!sockname) {
         errno = EINVAL;
         return -1;
     }
@@ -83,12 +82,12 @@ int closeConnection(const char* sockname){
     // Scrivo nel buffer il comando per chiudere la connessione
     snprintf(message_buffer, MESSAGE_LENGTH, "%d", DISCONNECT);
     // Invio il messaggio al server
-    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
     // Non aspetto una risposta dal server, chiuso il socket
-    if(close(client_socket) == -1){
+    if (close(client_socket) == -1) {
         client_socket = -1;
         return -1;
     }
@@ -99,15 +98,15 @@ int closeConnection(const char* sockname){
     return 0;
 }
 
-int openFile(const char* pathname, int flags, const char* dirname){
+int openFile(const char* pathname, int flags, const char* dirname) {
     // Controllo la validità degli argomenti
-    if(!pathname || flags < 0){
+    if (!pathname || flags < 0) {
         errno = EINVAL;
         return -1;
     }
 
     // Controllo che sia stata instaurata una connessione con il server
-    if(client_socket == -1){
+    if (client_socket == -1) {
         errno = ENOTCONN;
         return -1;
     }
@@ -115,38 +114,38 @@ int openFile(const char* pathname, int flags, const char* dirname){
     // Preparo la richiesta da inviare
     memset(message_buffer, 0, MESSAGE_LENGTH);
     snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %d", OPEN, pathname, flags);
-    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
-    if(VERBOSE) printf("Request to open '%s' file... \n", pathname);
+    if (VERBOSE) printf("Request to open '%s' file... \n", pathname);
 
     // Ricevo dal server eventuali file espulsi
     int victims_no = 0;
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
-    if(sscanf(message_buffer, "%d", &victims_no) != 1){
+    if (sscanf(message_buffer, "%d", &victims_no) != 1) {
         errno = EBADMSG;
         return -1;
     }
-    
-    if(victims_no > 0){
+
+    if (victims_no > 0) {
         int i = 0;
         char* token = NULL;
         char* strtok_status = NULL;
-        
+
         size_t victim_size = 0;
         void* victim_contents = NULL;
         char victim_pathname[MESSAGE_LENGTH];
-        
+
         if (VERBOSE) printf("%d file(s) have been ejected from the server\n", victims_no);
-        for(;i<victims_no;i++){
+        for (; i < victims_no; i++) {
             // Ricevo dal server il nome e la dimensione del file
             memset(message_buffer, 0, MESSAGE_LENGTH);
-            memset(victim_pathname,0,MESSAGE_LENGTH);
-            if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+            memset(victim_pathname, 0, MESSAGE_LENGTH);
+            if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
                 return -1;
             }
 
@@ -163,32 +162,32 @@ int openFile(const char* pathname, int flags, const char* dirname){
                 return -1;
             }
 
-            if (VERBOSE) printf("Receiving file n.%d (%zu bytes): '%s' \n", i+1, victim_size, victim_pathname);
+            if (VERBOSE) printf("Receiving file n.%d (%zu bytes): '%s' \n", i + 1, victim_size, victim_pathname);
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
-            if(!victim_contents) return -1;
+            if (!victim_contents) return -1;
 
             memset(victim_contents, 0, victim_size);
-            if(readn((long)client_socket, victim_contents, victim_size) == -1){
+            if (readn((long)client_socket, victim_contents, victim_size) == -1) {
                 return -1;
             }
 
             // Se il client ha specificato una cartella in cui salvare i file espulsi,
             //  procedo a salvare i file ricreando l'albero delle directories specificato nel pathname
-            if(dirname){
+            if (dirname) {
                 // Creo il path completo per il salvataggio del file
                 // Calcolo la lunghezza del path indicato da dirname
                 size_t dirname_length = strlen(dirname);
-                char abs_path[PATH_MAX]; // => dirname/victim_pathname
+                char abs_path[PATH_MAX];  // => dirname/victim_pathname
                 memset(abs_path, 0, PATH_MAX);
-                
+
                 // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
                 //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
                 // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
-                int slash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
+                int slash = dirname[dirname_length - 1] == '/' || victim_pathname[0] == '/';
                 // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
-                snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);\
+                snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);
 
                 // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
                 //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
@@ -197,13 +196,13 @@ int openFile(const char* pathname, int flags, const char* dirname){
 
                 // Salvo il contenuto del file sul disco
                 FILE* output_file = fopen(abs_path, "w");
-                if(!output_file) return -1;
-                if(fputs(victim_contents, output_file) == EOF){
+                if (!output_file) return -1;
+                if (fputs(victim_contents, output_file) == EOF) {
                     fclose(output_file);
                     return -1;
                 }
-                if(fclose(output_file) == -1) return -1; 
-                if(VERBOSE) printf("%zu bytes saved to '%s'!\n", victim_size, abs_path);
+                if (fclose(output_file) == -1) return -1;
+                if (VERBOSE) printf("%zu bytes saved to '%s'!\n", victim_size, abs_path);
             }
 
             free(victim_contents);
@@ -212,18 +211,18 @@ int openFile(const char* pathname, int flags, const char* dirname){
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
     // Interpreto (il codice del)la risposta ricevuta
     int status;
-    if(sscanf(message_buffer, "%d", &status) != 1){
+    if (sscanf(message_buffer, "%d", &status) != 1) {
         errno = EBADMSG;
         return -1;
     }
 
-    if(status >= 0){
+    if (status >= 0) {
         if (VERBOSE) printf("File opened successfully!\n");
         return status;
     }
@@ -232,15 +231,15 @@ int openFile(const char* pathname, int flags, const char* dirname){
     return status;
 }
 
-int readFile(const char* pathname, void** buf, size_t* size, const char* dirname){
+int readFile(const char* pathname, void** buf, size_t* size, const char* dirname) {
     // Controllo la validità degli argomenti
-    if(!pathname || !buf || !size){
+    if (!pathname || !buf || !size) {
         errno = EINVAL;
         return -1;
     }
 
     // Controllo che sia stata instaurata una connessione con il server
-    if(client_socket == -1){
+    if (client_socket == -1) {
         errno = ENOTCONN;
         return -1;
     }
@@ -248,7 +247,7 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
     // Invio al server la richiesta di READ
     memset(message_buffer, 0, MESSAGE_LENGTH);
     snprintf(message_buffer, MESSAGE_LENGTH, "%d %s", READ, pathname);
-    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
@@ -256,24 +255,24 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
 
     // Ricevo dal server un messaggio di conferma e, se il file è stato trovato, la sua dimensione
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
     int result = 0;
     char* strtok_status = NULL;
     char* token = strtok_r(message_buffer, " ", &strtok_status);
-    
+
     if (!token) return -1;
     if (sscanf(token, "%d", &result) != 1) {
         return -1;
     }
-    
-    if(result == 0){
+
+    if (result == 0) {
         if (VERBOSE) printf("Something went wrong!\n");
         errno = ENOENT;
         return -1;
-    }else if(result == -1){
+    } else if (result == -1) {
         if (VERBOSE) printf("Something went wrong!\n");
         errno = EPERM;
         return -1;
@@ -288,24 +287,24 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
     *size = size_from_server;
 
     // Ricevo il file dal server
-    *buf = malloc(*size); // Chiamare la free di questa memoria è compito del client
+    *buf = malloc(*size);  // Chiamare la free di questa memoria è compito del client
     memset(*buf, 0, *size);
-    if(readn((long)client_socket, *buf, *size) == -1){
+    if (readn((long)client_socket, *buf, *size) == -1) {
         return -1;
     }
 
     // Se <dirname> è stata specificata, salvo il file sul disco
-    if(dirname){
+    if (dirname) {
         // Creo il path completo per il salvataggio del file
         // Calcolo la lunghezza del path indicato da dirname
         size_t dirname_length = strlen(dirname);
-        char abs_path[PATH_MAX]; // => dirname/pathname
+        char abs_path[PATH_MAX];  // => dirname/pathname
         memset(abs_path, 0, PATH_MAX);
-        
+
         // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
         //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
         // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
-        int slash = dirname[dirname_length-1] == '/' || pathname[0] == '/';
+        int slash = dirname[dirname_length - 1] == '/' || pathname[0] == '/';
         // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
         snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, pathname);
 
@@ -316,13 +315,13 @@ int readFile(const char* pathname, void** buf, size_t* size, const char* dirname
 
         // Salvo il contenuto del file sul disco
         FILE* output_file = fopen(abs_path, "w");
-        if(!output_file) return -1;
-        if(fputs(*buf, output_file) == EOF){
+        if (!output_file) return -1;
+        if (fputs(*buf, output_file) == EOF) {
             fclose(output_file);
             return -1;
         }
-        if(fclose(output_file) == -1) return -1;
-        if(VERBOSE) printf("%zu bytes saved to '%s'!\n", *size, abs_path);
+        if (fclose(output_file) == -1) return -1;
+        if (VERBOSE) printf("%zu bytes saved to '%s'!\n", *size, abs_path);
     }
 
     if (VERBOSE) printf("Successfully read %zu bytes!\n", *size);
@@ -370,11 +369,11 @@ int readNFiles(int N, const char* dirname) {
 
     // files_no > 0
     if (VERBOSE) printf("%d file(s) have been read from the server\n", files_no);
-    
+
     int i = 0;
-    char* token = NULL;                  // Appoggio per strtok_r
-    char* strtok_status = NULL;          // Stato per strtok_r
-    
+    char* token = NULL;          // Appoggio per strtok_r
+    char* strtok_status = NULL;  // Stato per strtok_r
+
     size_t file_size = 0;                // Dimensione del file da leggere
     void* file_contents = NULL;          // Contenuto del file da leggere
     char file_pathname[MESSAGE_LENGTH];  // Pathname del file da leggere
@@ -463,32 +462,32 @@ int readNFiles(int N, const char* dirname) {
     return files_no;
 }
 
-int writeFile(const char* pathname, const char* dirname){
+int writeFile(const char* pathname, const char* dirname) {
     // Controllo la validità degli argomenti
-    if(!pathname){
+    if (!pathname) {
         errno = EINVAL;
         return -1;
     }
 
     // Controllo che sia stata instaurata una connessione con il server
-    if(client_socket == -1){
+    if (client_socket == -1) {
         errno = ENOTCONN;
         return -1;
     }
-    
+
     // Controllo che il file esista e che dispongo dei permessi necessari per poterlo leggere
     if (access(pathname, R_OK) == -1) {
         errno = EPERM;
         return -1;
     }
-    
+
     // Apro il file
     FILE* file = fopen(pathname, "r");
-    if(!file) return -1; 
+    if (!file) return -1;
 
     // Determino la dimensione del file
-    struct stat file_stat; // * file_stat.st_size è la dimensione del file
-    if(stat(pathname, &file_stat) == -1){
+    struct stat file_stat;  // * file_stat.st_size è la dimensione del file
+    if (stat(pathname, &file_stat) == -1) {
         fclose(file);
         return -1;
     }
@@ -496,23 +495,23 @@ int writeFile(const char* pathname, const char* dirname){
     // Invio al server la richiesta di WRITE, il pathname e la dimensione del file
     memset(message_buffer, 0, MESSAGE_LENGTH);
     snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %zu", WRITE, pathname, file_stat.st_size);
-    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         fclose(file);
         return -1;
     }
 
-    if(VERBOSE) printf("Request to write %zu bytes in '%s' file...\n", file_stat.st_size, pathname);
+    if (VERBOSE) printf("Request to write %zu bytes in '%s' file...\n", file_stat.st_size, pathname);
 
     // Alloco la memoria necessaria per leggere il file
     void* contents = malloc(file_stat.st_size);
-    if(!contents){
+    if (!contents) {
         fclose(file);
         return -1;
     }
     // Leggo il contenuto del file come un unico blocco di dimensione file_stat.st_size
     fread(contents, file_stat.st_size, 1, file);
     // Chiudo il file
-    if(fclose(file) == -1){
+    if (fclose(file) == -1) {
         free(contents);
         return -1;
     }
@@ -529,30 +528,29 @@ int writeFile(const char* pathname, const char* dirname){
     // Ricevo dal server eventuali file espulsi
     int victims_no = 0;
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
-    if(sscanf(message_buffer, "%d", &victims_no) != 1){
+    if (sscanf(message_buffer, "%d", &victims_no) != 1) {
         errno = EBADMSG;
         return -1;
     }
-    
 
-    if(victims_no > 0){
+    if (victims_no > 0) {
         int i = 0;
         char* token = NULL;
         char* strtok_status = NULL;
-    
+
         size_t victim_size = 0;
         void* victim_contents = NULL;
         char victim_pathname[MESSAGE_LENGTH];
-    
+
         if (VERBOSE) printf("%d file(s) have been ejected from the server\n", victims_no);
-        for(;i<victims_no;i++){
+        for (; i < victims_no; i++) {
             // Ricevo dal server il nome e la dimensione del file
             memset(message_buffer, 0, MESSAGE_LENGTH);
-            memset(victim_pathname,0,MESSAGE_LENGTH);
-            if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+            memset(victim_pathname, 0, MESSAGE_LENGTH);
+            if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
                 return -1;
             }
 
@@ -569,168 +567,30 @@ int writeFile(const char* pathname, const char* dirname){
                 return -1;
             }
 
-            if (VERBOSE) printf("Receiving file n.%d (%zu bytes): '%s' \n", i+1, victim_size, victim_pathname);
+            if (VERBOSE) printf("Receiving file n.%d (%zu bytes): '%s' \n", i + 1, victim_size, victim_pathname);
 
             // Alloco spazio per il file
             victim_contents = malloc(victim_size);
-            if(!victim_contents) return -1;
+            if (!victim_contents) return -1;
 
             memset(victim_contents, 0, victim_size);
-            if(readn((long)client_socket, victim_contents, victim_size) == -1){
+            if (readn((long)client_socket, victim_contents, victim_size) == -1) {
                 return -1;
             }
 
             // Se il client ha specificato una cartella in cui salvare i file espulsi,
             //  procedo a salvare i file ricreando l'albero delle directories specificato nel pathname
-            if(dirname){
+            if (dirname) {
                 // Creo il path completo per il salvataggio del file
                 // Calcolo la lunghezza del path indicato da dirname
                 size_t dirname_length = strlen(dirname);
-                char abs_path[PATH_MAX]; // => dirname/victim_pathname
+                char abs_path[PATH_MAX];  // => dirname/victim_pathname
                 memset(abs_path, 0, PATH_MAX);
-                
+
                 // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
                 //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
                 // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
-                int slash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
-                // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
-                snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);\
-
-                // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
-                //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
-                //  per poter contenere il file, in maniera ricorsiva. Un comportamento simile al comando 'mkdir -p <path>'
-                mkdir_p(abs_path);
-
-                // Salvo il contenuto del file sul disco
-                FILE* output_file = fopen(abs_path, "w");
-                if(!output_file) return -1;
-                if(fputs(victim_contents, output_file) == EOF){
-                    fclose(output_file);
-                    return -1;
-                }
-                if(fclose(output_file) == -1) return -1; 
-                if(VERBOSE) printf("%zu bytes saved to '%s'!\n", victim_size, abs_path);
-            }
-
-            free(victim_contents);
-        }
-    }
-
-    // Leggo la risposta
-    memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
-        return -1;
-    }
-
-    // Interpreto (il codice del)la risposta ricevuta
-    int status;
-    if(sscanf(message_buffer, "%d", &status) != 1){
-        errno = EBADMSG;
-        return -1;
-    }
-    
-    if(status >= 0){
-        if (VERBOSE) printf("%zu bytes written successfully!\n", file_stat.st_size);
-        return status;
-    }
-        
-    if (VERBOSE) printf("Something went wrong!\n");
-    return status;
-}
-
-int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname){
-    // Controllo la validità degli argomenti
-    if(!pathname || !buf || size == 0){
-        errno = EINVAL;
-        return -1;
-    }
-
-    // Controllo che sia stata instaurata una connessione con il server
-    if(client_socket == -1){
-        errno = ENOTCONN;
-        return -1;
-    }
-
-    // Invio al server la richiesta di APPEND, il pathname e la dimensione del file
-    memset(message_buffer, 0, MESSAGE_LENGTH);
-    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %zu", APPEND, pathname, size);
-    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
-        return -1;
-    }
-
-    if(VERBOSE) printf("Request to append %zu bytes to '%s' file...\n", size, pathname);
-    
-    // Invio il contenuto del file che voglio scrivere
-    if (writen((long)client_socket, buf, size) == -1) {
-        return -1;
-    }
-
-    // Ricevo dal server eventuali file espulsi
-    int victims_no = 0;
-    memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
-        return -1;
-    }
-    if(sscanf(message_buffer, "%d", &victims_no) != 1){
-        errno = EBADMSG;
-        return -1;
-    }
-    
-
-    if(victims_no > 0){
-        int i = 0;
-        char* token = NULL;
-        char* strtok_status = NULL;
-
-        size_t victim_size = 0;
-        void* victim_contents = NULL;
-        char victim_pathname[MESSAGE_LENGTH];
-        
-        if (VERBOSE) printf("%d file(s) have been ejected from the server\n", victims_no);
-        for(;i<victims_no;i++){
-            // Ricevo dal server il nome e la dimensione del file
-            memset(message_buffer, 0, MESSAGE_LENGTH);
-            memset(victim_pathname,0,MESSAGE_LENGTH);
-            if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
-                return -1;
-            }
-
-            // Pathname
-            token = strtok_r(message_buffer, " ", &strtok_status);
-            if (!token || sscanf(token, "%s", victim_pathname) != 1) {
-                errno = EBADMSG;
-                return -1;
-            }
-            // Size
-            token = strtok_r(NULL, " ", &strtok_status);
-            if (!token || sscanf(token, "%zu", &victim_size) != 1) {
-                errno = EBADMSG;
-                return -1;
-            }
-
-            if (VERBOSE) printf("Receiving file n.%d (%zu bytes): '%s' \n", i+1, victim_size, victim_pathname);
-
-            // Alloco spazio per il file
-            victim_contents = malloc(victim_size);
-            if(!victim_contents) return -1;
-            memset(victim_contents, 0, victim_size);
-            if(readn((long)client_socket, victim_contents, victim_size) == -1){
-                return -1;
-            }
-
-            // Se il client ha specificato una cartella in cui salvare i file espulsi,
-            //  procedo a salvare i file ricreando l'albero delle directories specificato nel pathname
-            if(dirname){
-                // Creo il path completo per il salvataggio del file
-                // Calcolo la lunghezza del path indicato da dirname
-                size_t dirname_length = strlen(dirname);
-                char abs_path[PATH_MAX]; // => dirname/victim_pathname
-                memset(abs_path, 0, PATH_MAX);
-                
-                // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
-                //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
-                // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
-                int slash = dirname[dirname_length-1] == '/' || victim_pathname[0] == '/';
+                int slash = dirname[dirname_length - 1] == '/' || victim_pathname[0] == '/';
                 // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
                 snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);
 
@@ -741,13 +601,13 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
                 // Salvo il contenuto del file sul disco
                 FILE* output_file = fopen(abs_path, "w");
-                if(!output_file) return -1;
-                if(fputs(victim_contents, output_file) == EOF){
+                if (!output_file) return -1;
+                if (fputs(victim_contents, output_file) == EOF) {
                     fclose(output_file);
                     return -1;
                 }
-                if(fclose(output_file) == -1) return -1; 
-                if(VERBOSE) printf("%zu bytes saved to '%s'!\n", victim_size, abs_path);
+                if (fclose(output_file) == -1) return -1;
+                if (VERBOSE) printf("%zu bytes saved to '%s'!\n", victim_size, abs_path);
             }
 
             free(victim_contents);
@@ -756,13 +616,150 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
     // Interpreto (il codice del)la risposta ricevuta
     int status;
-    if(sscanf(message_buffer, "%d", &status) != 1){
+    if (sscanf(message_buffer, "%d", &status) != 1) {
+        errno = EBADMSG;
+        return -1;
+    }
+
+    if (status >= 0) {
+        if (VERBOSE) printf("%zu bytes written successfully!\n", file_stat.st_size);
+        return status;
+    }
+
+    if (VERBOSE) printf("Something went wrong!\n");
+    return status;
+}
+
+int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname) {
+    // Controllo la validità degli argomenti
+    if (!pathname || !buf || size == 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Controllo che sia stata instaurata una connessione con il server
+    if (client_socket == -1) {
+        errno = ENOTCONN;
+        return -1;
+    }
+
+    // Invio al server la richiesta di APPEND, il pathname e la dimensione del file
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    snprintf(message_buffer, MESSAGE_LENGTH, "%d %s %zu", APPEND, pathname, size);
+    if (writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
+        return -1;
+    }
+
+    if (VERBOSE) printf("Request to append %zu bytes to '%s' file...\n", size, pathname);
+
+    // Invio il contenuto del file che voglio scrivere
+    if (writen((long)client_socket, buf, size) == -1) {
+        return -1;
+    }
+
+    // Ricevo dal server eventuali file espulsi
+    int victims_no = 0;
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
+        return -1;
+    }
+    if (sscanf(message_buffer, "%d", &victims_no) != 1) {
+        errno = EBADMSG;
+        return -1;
+    }
+
+    if (victims_no > 0) {
+        int i = 0;
+        char* token = NULL;
+        char* strtok_status = NULL;
+
+        size_t victim_size = 0;
+        void* victim_contents = NULL;
+        char victim_pathname[MESSAGE_LENGTH];
+
+        if (VERBOSE) printf("%d file(s) have been ejected from the server\n", victims_no);
+        for (; i < victims_no; i++) {
+            // Ricevo dal server il nome e la dimensione del file
+            memset(message_buffer, 0, MESSAGE_LENGTH);
+            memset(victim_pathname, 0, MESSAGE_LENGTH);
+            if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
+                return -1;
+            }
+
+            // Pathname
+            token = strtok_r(message_buffer, " ", &strtok_status);
+            if (!token || sscanf(token, "%s", victim_pathname) != 1) {
+                errno = EBADMSG;
+                return -1;
+            }
+            // Size
+            token = strtok_r(NULL, " ", &strtok_status);
+            if (!token || sscanf(token, "%zu", &victim_size) != 1) {
+                errno = EBADMSG;
+                return -1;
+            }
+
+            if (VERBOSE) printf("Receiving file n.%d (%zu bytes): '%s' \n", i + 1, victim_size, victim_pathname);
+
+            // Alloco spazio per il file
+            victim_contents = malloc(victim_size);
+            if (!victim_contents) return -1;
+            memset(victim_contents, 0, victim_size);
+            if (readn((long)client_socket, victim_contents, victim_size) == -1) {
+                return -1;
+            }
+
+            // Se il client ha specificato una cartella in cui salvare i file espulsi,
+            //  procedo a salvare i file ricreando l'albero delle directories specificato nel pathname
+            if (dirname) {
+                // Creo il path completo per il salvataggio del file
+                // Calcolo la lunghezza del path indicato da dirname
+                size_t dirname_length = strlen(dirname);
+                char abs_path[PATH_MAX];  // => dirname/victim_pathname
+                memset(abs_path, 0, PATH_MAX);
+
+                // Gestisco il caso in cui dirname termina con '/' e victim_pathname inizia con '/'
+                //if(dirname[dirname_length-1] == '/' && victim_pathname[0] == '/') dirname[dirname_length-1] = '\0';
+                // Controllo se dirname termina con '/' oppure victim_pathname inizia con '/'
+                int slash = dirname[dirname_length - 1] == '/' || victim_pathname[0] == '/';
+                // Se dirname non termina con '/', e victim_name non inizia con '/', lo aggiungo tra i due
+                snprintf(abs_path, PATH_MAX, slash ? "%s%s" : "%s/%s", dirname, victim_pathname);
+
+                // Per mantenere l'integrità del path assoluto del file che ho ricevuto dal server
+                //  ho eventualmente bisogno di creare all'interno di dirname una struttura di cartelle
+                //  per poter contenere il file, in maniera ricorsiva. Un comportamento simile al comando 'mkdir -p <path>'
+                mkdir_p(abs_path);
+
+                // Salvo il contenuto del file sul disco
+                FILE* output_file = fopen(abs_path, "w");
+                if (!output_file) return -1;
+                if (fputs(victim_contents, output_file) == EOF) {
+                    fclose(output_file);
+                    return -1;
+                }
+                if (fclose(output_file) == -1) return -1;
+                if (VERBOSE) printf("%zu bytes saved to '%s'!\n", victim_size, abs_path);
+            }
+
+            free(victim_contents);
+        }
+    }
+
+    // Leggo la risposta
+    memset(message_buffer, 0, MESSAGE_LENGTH);
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
+        return -1;
+    }
+
+    // Interpreto (il codice del)la risposta ricevuta
+    int status;
+    if (sscanf(message_buffer, "%d", &status) != 1) {
         errno = EBADMSG;
         return -1;
     }
@@ -776,15 +773,15 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     return status;
 }
 
-int lockFile(const char* pathname){
+int lockFile(const char* pathname) {
     // Controllo la validità degli argomenti
-    if(!pathname){
+    if (!pathname) {
         errno = EINVAL;
         return -1;
     }
 
     // Controllo che sia stata instaurata una connessione con il server
-    if(client_socket == -1){
+    if (client_socket == -1) {
         errno = ENOTCONN;
         return -1;
     }
@@ -792,21 +789,21 @@ int lockFile(const char* pathname){
     // Preparo la richiesta da inviare
     memset(message_buffer, 0, MESSAGE_LENGTH);
     snprintf(message_buffer, MESSAGE_LENGTH, "%d %s", LOCK, pathname);
-    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
-    if(VERBOSE) printf("Request to lock '%s' file...\n", pathname);
+    if (VERBOSE) printf("Request to lock '%s' file...\n", pathname);
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
     // Interpreto (il codice del)la risposta ricevuta
     int status;
-    if(sscanf(message_buffer, "%d", &status) != 1){
+    if (sscanf(message_buffer, "%d", &status) != 1) {
         errno = EBADMSG;
         return -1;
     }
@@ -820,15 +817,15 @@ int lockFile(const char* pathname){
     return status;
 }
 
-int unlockFile(const char* pathname){
+int unlockFile(const char* pathname) {
     // Controllo la validità degli argomenti
-    if(!pathname){
+    if (!pathname) {
         errno = EINVAL;
         return -1;
     }
 
     // Controllo che sia stata instaurata una connessione con il server
-    if(client_socket == -1){
+    if (client_socket == -1) {
         errno = ENOTCONN;
         return -1;
     }
@@ -836,21 +833,21 @@ int unlockFile(const char* pathname){
     // Preparo la richiesta da inviare
     memset(message_buffer, 0, MESSAGE_LENGTH);
     snprintf(message_buffer, MESSAGE_LENGTH, "%d %s", UNLOCK, pathname);
-    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
-    if(VERBOSE) printf("Request to unlock '%s' file...\n", pathname);
+    if (VERBOSE) printf("Request to unlock '%s' file...\n", pathname);
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
     // Interpreto (il codice del)la risposta ricevuta
     int status;
-    if(sscanf(message_buffer, "%d", &status) != 1){
+    if (sscanf(message_buffer, "%d", &status) != 1) {
         errno = EBADMSG;
         return -1;
     }
@@ -864,15 +861,15 @@ int unlockFile(const char* pathname){
     return status;
 }
 
-int closeFile(const char* pathname){
+int closeFile(const char* pathname) {
     // Controllo la validità degli argomenti
-    if(!pathname){
+    if (!pathname) {
         errno = EINVAL;
         return -1;
     }
 
     // Controllo che sia stata instaurata una connessione con il server
-    if(client_socket == -1){
+    if (client_socket == -1) {
         errno = ENOTCONN;
         return -1;
     }
@@ -880,21 +877,21 @@ int closeFile(const char* pathname){
     // Preparo la richiesta da inviare
     memset(message_buffer, 0, MESSAGE_LENGTH);
     snprintf(message_buffer, MESSAGE_LENGTH, "%d %s", CLOSE, pathname);
-    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
-    if(VERBOSE) printf("Request to close '%s' file... \n", pathname);
+    if (VERBOSE) printf("Request to close '%s' file... \n", pathname);
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
     // Interpreto (il codice del)la risposta ricevuta
     int status;
-    if(sscanf(message_buffer, "%d", &status) != 1){
+    if (sscanf(message_buffer, "%d", &status) != 1) {
         errno = EBADMSG;
         return -1;
     }
@@ -908,15 +905,15 @@ int closeFile(const char* pathname){
     return status;
 }
 
-int removeFile(const char* pathname){
+int removeFile(const char* pathname) {
     // Controllo la validità degli argomenti
-    if(!pathname){
+    if (!pathname) {
         errno = EINVAL;
         return -1;
     }
 
     // Controllo che sia stata instaurata una connessione con il server
-    if(client_socket == -1){
+    if (client_socket == -1) {
         errno = ENOTCONN;
         return -1;
     }
@@ -924,21 +921,21 @@ int removeFile(const char* pathname){
     // Preparo la richiesta da inviare
     memset(message_buffer, 0, MESSAGE_LENGTH);
     snprintf(message_buffer, MESSAGE_LENGTH, "%d %s", REMOVE, pathname);
-    if(writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (writen((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
-    if(VERBOSE) printf("Request to remove '%s' file... \n", pathname);
+    if (VERBOSE) printf("Request to remove '%s' file... \n", pathname);
 
     // Leggo la risposta
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    if(readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1){
+    if (readn((long)client_socket, (void*)message_buffer, MESSAGE_LENGTH) == -1) {
         return -1;
     }
 
     // Interpreto (il codice del)la risposta ricevuta
     int status;
-    if(sscanf(message_buffer, "%d", &status) != 1){
+    if (sscanf(message_buffer, "%d", &status) != 1) {
         errno = EBADMSG;
         return -1;
     }
@@ -959,22 +956,21 @@ int writeDirectory(const char* pathname, int upperbound, const char* dirname) {
         return -1;
     }
 
-    DIR* dir;              // Directory corrente
-    char path[PATH_MAX];   // Percorso completo
-    struct dirent* entry;  // Entry all'interno della cartella
-    struct stat file_stat; // Discrimino tra file e cartelle
+    DIR* dir;               // Directory corrente
+    char path[PATH_MAX];    // Percorso completo
+    struct dirent* entry;   // Entry all'interno della cartella
+    struct stat file_stat;  // Discrimino tra file e cartelle
 
     // Apro la cartella
     if (!(dir = opendir(pathname))) return -1;
 
-
     while ((entry = readdir(dir)) != NULL) {
         snprintf(path, sizeof(path), "%s/%s", pathname, entry->d_name);
-        if(stat(path, &file_stat) == -1) continue;
+        if (stat(path, &file_stat) == -1) continue;
 
         if (S_ISREG(file_stat.st_mode)) {
             // E' un file, lo carico sul server se non ho raggiunto il limite superiore
-            if(upperbound > 0){
+            if (upperbound > 0) {
                 // Creo il file sul server e lo apro in scrittura
                 openFile(path, O_CREATE | O_LOCK, dirname);
                 // Carico il contenuto del file
@@ -983,7 +979,7 @@ int writeDirectory(const char* pathname, int upperbound, const char* dirname) {
                 closeFile(path);
                 upperbound--;
             }
-        } else if (S_ISDIR(file_stat.st_mode)){
+        } else if (S_ISDIR(file_stat.st_mode)) {
             // E' una directory
             // Se corrisponde a '.' oppure '..', salto
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
