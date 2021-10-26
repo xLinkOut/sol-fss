@@ -128,7 +128,7 @@ static void* worker(void* args) {
     // openFile
     int flags = 0;
     // readFile, writeFile, appendToFile, removeFile
-    size_t size = 0;
+    size_t file_size = 0;
     void* contents = NULL;
     // readNFiles
     int N = 0;
@@ -262,8 +262,8 @@ static void* worker(void* args) {
                 
                 // Eseguo la API call
                 contents = NULL;
-                size = 0;
-                api_exit_code = storage_read_file(worker_args->storage, pathname, &contents, &size, fd_ready);
+                file_size = 0;
+                api_exit_code = storage_read_file(worker_args->storage, pathname, &contents, &file_size, fd_ready);
                 
                 int code = 1;
                 if(api_exit_code == -1){
@@ -273,14 +273,14 @@ static void* worker(void* args) {
 
                 // Invio al client il codice di ritorno e, eventualmente, la dimensione del file
                 memset(response, 0, MESSAGE_LENGTH);
-                snprintf(response, MESSAGE_LENGTH, "%d %zu", code, code == 1 ? size : 0);
+                snprintf(response, MESSAGE_LENGTH, "%d %zu", code, code == 1 ? file_size : 0);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
                     log_event("ERROR", "writen in read failed: (%d) ", errno);
                     break;
                 }
                 
                 if(api_exit_code == -1) break;
-                if (writen((long)fd_ready, contents, size) == -1) {
+                if (writen((long)fd_ready, contents, file_size) == -1) {
                     log_event("ERROR", "writen in read failed: (%d) ", errno);
                     break;
                 }
@@ -288,7 +288,7 @@ static void* worker(void* args) {
                 // Libero la memoria occupata per leggere il file
                 free(contents);
 
-                log_event("INFO", "[%d] READ: %s %zu bytes => %c", thread_id, pathname, size, api_exit_code == 0 ? 'O' : 'X');
+                log_event("INFO", "[%d] READ: %s %zu bytes => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case READN:  // ! readNFiles: READN <int:n>
@@ -355,7 +355,7 @@ static void* worker(void* args) {
                 }
 
                 // Parso la dimensione del file
-                size_t file_size = 0;
+                file_size = 0;
                 token = strtok_r(NULL, " ", &strtok_status);
                 if (!token || sscanf(token, "%zu", &file_size) != 1) {
                     log_event("ERROR", "bad write request: (%d) ", errno);
@@ -601,9 +601,9 @@ static void* worker(void* args) {
                 }
 
                 //printf("REMOVE: %s\n", pathname);
-                size = 0;
+                file_size = 0;
                 // Eseguo la API call
-                api_exit_code = storage_remove_file(worker_args->storage, pathname, &size, fd_ready);
+                api_exit_code = storage_remove_file(worker_args->storage, pathname, &file_size, fd_ready);
                 // Preparo il buffer per la risposta
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
@@ -612,7 +612,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "[%d] REMOVE: %s %zu => %c", thread_id, pathname, size, api_exit_code == 0 ? 'O' : 'X');
+                log_event("INFO", "[%d] REMOVE: %s %zu => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
                 
             case DISCONNECT:  // ! closeConnection
