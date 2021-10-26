@@ -305,7 +305,7 @@ int icl_hash_dump(FILE *stream, icl_hash_t *ht) {
 }
 
 void *icl_hash_get_victim(icl_hash_t *ht, replacement_policy_t rp, const char *pathname) {
-    if (!ht) return NULL;  // todo errno
+    if (!ht) return NULL;
 
     icl_entry_t *bucket, *curr;
     storage_file_t *victim_name = NULL;

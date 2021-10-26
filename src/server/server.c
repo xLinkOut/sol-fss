@@ -788,22 +788,6 @@ int main(int argc, char* argv[]) {
 
     printf("Info: configuration loaded successfully!\n");
 
-#ifdef DEBUG
-    // Sommario di debug
-    char* human_readable_max_capacity = calculate_size(STORAGE_MAX_CAPACITY);
-    printf(
-        "Debug: configuration summary:\n"
-        "\t+ STORAGE_MAX_CAPACITY:\t%s\n"
-        "\t+ STORAGE_MAX_FILES:\t%ld\n"
-        "\t+ REPLACEMENT_POLICY:\t%d\n"
-        "\t+ THREADS_WORKER:\t%ld\n"
-        "\t+ SOCKET_PATH:\t%s\n"
-        "\t+ LOG_PATH:\t%s\n",
-        human_readable_max_capacity, STORAGE_MAX_FILES, REPLACEMENT_POLICY,
-        THREADS_WORKER, SOCKET_PATH, LOG_PATH);
-    free(human_readable_max_capacity);
-#endif
-
     // ! LOG FILE
     if ((log_file = fopen(LOG_PATH, "w")) == NULL) {
         perror("Error: failed to open log file");
@@ -969,7 +953,6 @@ int main(int argc, char* argv[]) {
 
         // ! SELECT
         if (select(fd_num + 1, &ready_set, NULL, NULL, &current_timeout) == -1) {
-            // TODO: gestione errori
             continue;
         }
 
