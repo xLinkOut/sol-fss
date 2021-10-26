@@ -1,5 +1,6 @@
 // @author Luca Cirillo (545480)
 
+#include <constants.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -8,7 +9,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <utils.h>
-#include <constants.h>
 
 int readn(long fd, void* buf, size_t size) {
     size_t left = size;

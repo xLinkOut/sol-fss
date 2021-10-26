@@ -80,19 +80,19 @@ void rwlock_destroy(rwlock_t* rwlock) {
 }
 
 bool read_should_wait(rwlock_t* rwlock) {
-    if(!rwlock) return false;
+    if (!rwlock) return false;
     // * Un lettore deve aspettare se sono presenti scrittori attivi oppure in attesa
     return (rwlock->active_writers > 0 || rwlock->waiting_writers > 0);
 }
 
 bool write_should_wait(rwlock_t* rwlock) {
-    if(!rwlock) return false;
+    if (!rwlock) return false;
     // * Uno scrittore deve aspettare se sono presenti scrittori attivi oppure lettori attivi
     return (rwlock->active_writers > 0 || rwlock->active_readers > 0);
 }
 
 bool rwlock_start_read(rwlock_t* rwlock) {
-    if(!rwlock) return false;
+    if (!rwlock) return false;
     if (pthread_mutex_lock(&rwlock->mutex) != 0)  // lock.acquire()
         return false;
 
@@ -116,7 +116,7 @@ bool rwlock_start_read(rwlock_t* rwlock) {
 }
 
 bool rwlock_done_read(rwlock_t* rwlock) {
-    if(!rwlock) return false;
+    if (!rwlock) return false;
     if (pthread_mutex_lock(&rwlock->mutex) != 0)  // lock.acquire()
         return false;
 
@@ -140,7 +140,7 @@ bool rwlock_done_read(rwlock_t* rwlock) {
 }
 
 bool rwlock_start_write(rwlock_t* rwlock) {
-    if(!rwlock) return false;
+    if (!rwlock) return false;
     if (pthread_mutex_lock(&rwlock->mutex) != 0)  // lock.acquire()
         return false;
 
@@ -164,7 +164,7 @@ bool rwlock_start_write(rwlock_t* rwlock) {
 }
 
 bool rwlock_done_write(rwlock_t* rwlock) {
-    if(!rwlock) return false;
+    if (!rwlock) return false;
     if (pthread_mutex_lock(&rwlock->mutex) != 0)  // lock.acquire()
         return false;
 
