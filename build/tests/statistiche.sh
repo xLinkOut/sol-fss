@@ -84,14 +84,19 @@ while IFS= read -r line; do
                 # Considero solo operazioni andate a buon fine
                 if [[ ${bytes[${#bytes[@]}-1]} == "O" ]] ; then
                     ((WRITE_NO+=1)) # Incremento il numero di WRITE
-                    if [[ ${bytes[${#bytes[@]}-4]} =~ $BYTES_RE ]] ; then
+                    if [[ ${bytes[${#bytes[@]}-4]} =~ $BYTES_RE ]] && [[ ${bytes[${#bytes[@]}-7]} =~ $BYTES_RE ]] ; then
                         # Aggiorno il conteggio dei bytes scritti
-                        ((WRITE_BYTES+=${bytes[${#bytes[@]}-4]}))
-                        # Incremento la dimensione dello storage
-                        ((STORAGE_SIZE+=${bytes[${#bytes[@]}-4]}))
-                        # Se è stato raggiunto un nuovo picco, aggiorno il massimo
-                        if [[ $STORAGE_SIZE -gt $MAX_STORAGE_SIZE ]] ; then
-                            ((MAX_STORAGE_SIZE=STORAGE_SIZE))
+                        ((WRITE_BYTES+=${bytes[${#bytes[@]}-7]}))
+                        # Se sovrascrivo un file identico, non aggiorno la dimensione dello storage
+                        if [[ ${bytes[${#bytes[@]}-4]} -ne ${bytes[${#bytes[@]}-7]} ]] ; then
+                            # Tolgo dalla dimensione dello storage i bytes sovrascritti
+                            ((STORAGE_SIZE-=${bytes[${#bytes[@]}-4]}))
+                            # Incremento la dimensione dello storage
+                            ((STORAGE_SIZE+=${bytes[${#bytes[@]}-7]}))
+                            # Se è stato raggiunto un nuovo picco, aggiorno il massimo
+                            if [[ $STORAGE_SIZE -gt $MAX_STORAGE_SIZE ]] ; then
+                                ((MAX_STORAGE_SIZE=STORAGE_SIZE))
+                            fi
                         fi
                     fi
                 fi
@@ -142,9 +147,10 @@ while IFS= read -r line; do
             # Considero solo operazioni andate a buon fine
             if [[ ${bytes[${#bytes[@]}-1]} == "O" ]] ; then
                 if [[ ${bytes[${#bytes[@]}-4]} =~ $BYTES_RE ]] ; then
+                    # Decremento il numero di file nello storage
+                    ((STORAGE_FILE-=1))
                     # Decremento la dimensione dello storage
                     ((STORAGE_SIZE-=${bytes[${#bytes[@]}-4]}))
-                    ((STORAGE_FILE-=1)) # Decremento il numero di file nello storage
                 fi
             fi
             ;;
