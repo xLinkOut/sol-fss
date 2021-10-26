@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <queue.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <storage.h>
@@ -16,7 +17,6 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <utils.h>
-#include <stdarg.h>
 
 // File di log
 FILE* log_file = NULL;
@@ -29,32 +29,32 @@ void log_event(const char* level, const char* message, ...) {
     // Formatto la data e l'ora attuale
     time_t timer = time(NULL);
     struct tm* tm_info = localtime(&timer);
-    if(!tm_info){
+    if (!tm_info) {
         perror("Error: failed to get timestamp");
         return;
     }
     char date_time[20];
     strftime(date_time, sizeof(date_time), "%d-%m-%Y %H:%M:%S", tm_info);
-    
+
     // Costruisco il messaggio da scrivere nel file
     char message_buffer[MESSAGE_LENGTH];
     memset(message_buffer, 0, MESSAGE_LENGTH);
-    va_list args; // Inizializzo la lista di argomenti variabili
-    va_start(args, message); // Partendo dall'ultimo argomento conosciuto, cioè <message>
-    vsprintf(message_buffer, message, args); // Formatto la stringa come farebbe la funzione printf
-    va_end(args); // Chiudo la lista di argomenti
+    va_list args;                             // Inizializzo la lista di argomenti variabili
+    va_start(args, message);                  // Partendo dall'ultimo argomento conosciuto, cioè <message>
+    vsprintf(message_buffer, message, args);  // Formatto la stringa come farebbe la funzione printf
+    va_end(args);                             // Chiudo la lista di argomenti
 
     // Acquisisto l'accesso esclusivo sul file di log
-    if(pthread_mutex_lock(&log_mutex) != 0){
+    if (pthread_mutex_lock(&log_mutex) != 0) {
         perror("Error: failed to lock log file");
         return;
     }
-    
+
     // Scrivo le informazioni sul file
     fprintf(log_file, "%s | %s\t| %s\n", date_time, level, message_buffer);
-    
+
     // Rilascio l'accesso esclusivo sul file di log
-    if(pthread_mutex_unlock(&log_mutex) != 0){
+    if (pthread_mutex_unlock(&log_mutex) != 0) {
         perror("Error: failed to unlock log file");
         return;
     }
@@ -117,14 +117,14 @@ static void* worker(void* args) {
     // Argomenti passati al thread worker
     worker_args_t* worker_args = (worker_args_t*)args;
 
-    int fd_ready;                   // fd del client servito al momento
-    int api_exit_code = 0;          // Codice di uscita di una API call
-    char* strtok_status;            // Stato per le chiamate alla syscall strtok_r
-    char request[MESSAGE_LENGTH];   // Messaggio richiesta del client
-    char response[MESSAGE_LENGTH];  // Messaggio risposta del server
-    char pathname[MESSAGE_LENGTH];  // Quasi ogni API call prevede un pathname
-    int thread_id = (int)pthread_self(); // ID del thread worker
-    
+    int fd_ready;                         // fd del client servito al momento
+    int api_exit_code = 0;                // Codice di uscita di una API call
+    char* strtok_status;                  // Stato per le chiamate alla syscall strtok_r
+    char request[MESSAGE_LENGTH];         // Messaggio richiesta del client
+    char response[MESSAGE_LENGTH];        // Messaggio risposta del server
+    char pathname[MESSAGE_LENGTH];        // Quasi ogni API call prevede un pathname
+    int thread_id = (int)pthread_self();  // ID del thread worker
+
     // openFile
     int flags = 0;
     // writeFile
@@ -140,7 +140,7 @@ static void* worker(void* args) {
     storage_file_t** victims = NULL;
 
     // ! MAIN WORKER LOOP
-    while (1) { // Esco dal while quando viene inserito un coda il valore WORKER_EXIT
+    while (1) {  // Esco dal while quando viene inserito un coda il valore WORKER_EXIT
         // Recupero un file descriptor pronto dalla queue
         fd_ready = queue_pop(worker_args->task_queue);
 
@@ -205,7 +205,7 @@ static void* worker(void* args) {
                 victims = NULL;
                 // Eseguo la API call
                 api_exit_code = storage_open_file(worker_args->storage, pathname, flags, &victims_no, &victims, fd_ready);
-                
+
                 // Invio al client eventuali file espulsi
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", victims_no);
@@ -214,10 +214,10 @@ static void* worker(void* args) {
                     break;
                 }
 
-                if(victims_no > 0){
+                if (victims_no > 0) {
                     log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
-                    for(int i=0;i<victims_no;i++){
+                    for (int i = 0; i < victims_no; i++) {
                         //printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
@@ -236,10 +236,10 @@ static void* worker(void* args) {
                         log_event("INFO", "[%d] VICTIM: %s %zu bytes => O", thread_id, victims[i]->name, victims[i]->size);
 
                         // Libero la memoria dal file appena inviato
-                        storage_file_destroy((void*) victims[i]);
+                        storage_file_destroy((void*)victims[i]);
                     }
                 }
-                
+
                 // Preparo il buffer per la risposta
                 memset(response, 0, MESSAGE_LENGTH);
                 snprintf(response, MESSAGE_LENGTH, "%d", api_exit_code);
@@ -251,7 +251,7 @@ static void* worker(void* args) {
                 log_event("INFO", "[%d] OPEN: %s %d => %c", thread_id, pathname, flags, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
-            case READ: // ! readFile: READ <str:pathname>
+            case READ:  // ! readFile: READ <str:pathname>
                 // Parso il pathname dalla richiesta
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
@@ -261,16 +261,18 @@ static void* worker(void* args) {
                 }
 
                 //printf("READ: %s\n", pathname);
-                
+
                 // Eseguo la API call
                 contents = NULL;
                 file_size = 0;
                 api_exit_code = storage_read_file(worker_args->storage, pathname, &contents, &file_size, fd_ready);
-                
+
                 int code = 1;
-                if(api_exit_code == -1){
-                    if(errno == ENOENT) code = 0;
-                    else if (errno == EPERM) code = -1;
+                if (api_exit_code == -1) {
+                    if (errno == ENOENT)
+                        code = 0;
+                    else if (errno == EPERM)
+                        code = -1;
                 }
 
                 // Invio al client il codice di ritorno e, eventualmente, la dimensione del file
@@ -280,8 +282,8 @@ static void* worker(void* args) {
                     log_event("ERROR", "writen in read failed: (%d) ", errno);
                     break;
                 }
-                
-                if(api_exit_code == -1) break;
+
+                if (api_exit_code == -1) break;
                 if (writen((long)fd_ready, contents, file_size) == -1) {
                     log_event("ERROR", "writen in read failed: (%d) ", errno);
                     break;
@@ -335,19 +337,19 @@ static void* worker(void* args) {
                             break;
                         }
 
-                        log_event("INFO", "[%d] READN: %d %s %zu bytes => O", thread_id, i+1, files_read[i]->name, files_read[i]->size);
+                        log_event("INFO", "[%d] READN: %d %s %zu bytes => O", thread_id, i + 1, files_read[i]->name, files_read[i]->size);
 
                         // Libero la memoria dal file appena inviato
                         storage_file_destroy((void*)files_read[i]);
                     }
                 }
 
-                if(files_read) free(files_read);
+                if (files_read) free(files_read);
 
                 log_event("INFO", "[%d] READN: %d => %c", thread_id, N, api_exit_code >= 0 ? 'O' : 'X');
                 break;
 
-            case WRITE: // ! writeFile: WRITE <str:pathname> <int:file_size>
+            case WRITE:  // ! writeFile: WRITE <str:pathname> <int:file_size>
                 // Parso il pathname del file
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
@@ -367,21 +369,21 @@ static void* worker(void* args) {
                 //printf("WRITE: %s %zu\n", pathname, file_size);
 
                 // Conosco la dimensione del file, posso allocare lo spazio necessario
-                contents = malloc(file_size); // Liberare questa memoria è compito di storage_file_destroy
-                if(!contents){
+                contents = malloc(file_size);  // Liberare questa memoria è compito di storage_file_destroy
+                if (!contents) {
                     log_event("ERROR", "failed to allocate memory for contents in write: (%d) ", errno);
                     break;
                 }
                 memset(contents, 0, file_size);
                 // Ricevo dal client il contenuto del file
-                if(readn((long)fd_ready, contents, file_size) == -1){
+                if (readn((long)fd_ready, contents, file_size) == -1) {
                     log_event("ERROR", "readn in write failed: (%d) ", errno);
                     free(contents);
                     break;
                 }
-                
+
                 // Scrivo il contenuto del file all'intero dello storage
-                old_size = 0; // Utilizzata per loggare la dimensione del file eventualmente sovrascritto
+                old_size = 0;  // Utilizzata per loggare la dimensione del file eventualmente sovrascritto
                 victims_no = 0;
                 victims = NULL;
                 api_exit_code = storage_write_file(worker_args->storage, pathname, contents, file_size, &victims_no, &victims, &old_size, fd_ready);
@@ -391,14 +393,14 @@ static void* worker(void* args) {
                 snprintf(response, MESSAGE_LENGTH, "%d", victims_no);
                 if (writen((long)fd_ready, (void*)response, MESSAGE_LENGTH) == -1) {
                     log_event("ERROR", "writen in write failed: (%d) ", errno);
-                    if(victims) free(victims);
+                    if (victims) free(victims);
                     break;
                 }
 
-                if(victims_no > 0){
+                if (victims_no > 0) {
                     log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
-                    for(int i=0;i<victims_no;i++){
+                    for (int i = 0; i < victims_no; i++) {
                         //printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
@@ -417,11 +419,11 @@ static void* worker(void* args) {
                         log_event("INFO", "[%d] VICTIM: %s %zu bytes => O", thread_id, victims[i]->name, victims[i]->size);
 
                         // Libero la memoria dal file appena inviato
-                        storage_file_destroy((void*) victims[i]);
+                        storage_file_destroy((void*)victims[i]);
                     }
                 }
-                
-                if(victims) free(victims);
+
+                if (victims) free(victims);
 
                 // Preparo il buffer per la risposta
                 memset(response, 0, MESSAGE_LENGTH);
@@ -434,7 +436,7 @@ static void* worker(void* args) {
                 log_event("INFO", "[%d] WRITE: %s %zu bytes (overwritten %zu bytes) => %c", thread_id, pathname, file_size, old_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
-            case APPEND: // ! appendToFile: APPEND <str:pathname> <int:size>
+            case APPEND:  // ! appendToFile: APPEND <str:pathname> <int:size>
                 // Parso il pathname del file
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
@@ -454,14 +456,14 @@ static void* worker(void* args) {
                 //printf("APPEND: %s %zu\n", pathname, file_size);
 
                 // Conosco la dimensione del file, posso allocare lo spazio necessario
-                contents = malloc(file_size); // Questa memoria viene liberata poco più in basso dal server
-                if(!contents){
+                contents = malloc(file_size);  // Questa memoria viene liberata poco più in basso dal server
+                if (!contents) {
                     log_event("ERROR", "failed to allocate memory for contents in append: (%d) ", errno);
                     break;
                 }
                 memset(contents, 0, file_size);
                 // Ricevo dal client il contenuto del file
-                if(readn((long)fd_ready, contents, file_size) == -1){
+                if (readn((long)fd_ready, contents, file_size) == -1) {
                     log_event("ERROR", "readn in append failed: (%d) ", errno);
                     free(contents);
                     break;
@@ -483,10 +485,10 @@ static void* worker(void* args) {
                     break;
                 }
 
-                if(victims_no > 0){
+                if (victims_no > 0) {
                     log_event("INFO", "[%d] REPLACEMENT: %d", thread_id, victims_no);
                     // Invio al client i file espulsi
-                    for(int i=0;i<victims_no;i++){
+                    for (int i = 0; i < victims_no; i++) {
                         //printf("Sending n.%d: %s %zu\n", i+1, victims[i]->name, victims[i]->size);
                         // Invio al client il nome e la dimensione del file
                         memset(response, 0, MESSAGE_LENGTH);
@@ -501,11 +503,11 @@ static void* worker(void* args) {
                             log_event("ERROR", "writen in append failed: (%d) ", errno);
                             break;
                         }
-                        
+
                         log_event("INFO", "[%d] VICTIM: %s %zu bytes => O", thread_id, victims[i]->name, victims[i]->size);
-                        
+
                         // Libero la memoria dal file appena inviato
-                        storage_file_destroy((void*) victims[i]);
+                        storage_file_destroy((void*)victims[i]);
                     }
                 }
 
@@ -516,11 +518,11 @@ static void* worker(void* args) {
                     log_event("ERROR", "writen in append failed: (%d) ", errno);
                     break;
                 }
-                
+
                 log_event("INFO", "[%d] APPEND: %s %zu bytes => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
-            case LOCK: // ! lockFile: LOCK <str:pathname>
+            case LOCK:  // ! lockFile: LOCK <str:pathname>
                 // Parso il pathname del file
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
@@ -528,7 +530,7 @@ static void* worker(void* args) {
                     log_event("ERROR", "bad lock request: (%d) ", errno);
                     break;
                 }
-                
+
                 //printf("LOCK %s\n", pathname);
 
                 // Eseguo la API call
@@ -545,7 +547,7 @@ static void* worker(void* args) {
                 log_event("INFO", "[%d] LOCK: %s => %c", thread_id, pathname, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
-            case UNLOCK: // ! unlockFile: UNLOCK <str:pathname>
+            case UNLOCK:  // ! unlockFile: UNLOCK <str:pathname>
                 // Parso il pathname del file
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
@@ -553,7 +555,7 @@ static void* worker(void* args) {
                     log_event("ERROR", "bad unlock request: (%d) ", errno);
                     break;
                 }
-                
+
                 //printf("UNLOCK %s\n", pathname);
 
                 // Eseguo la API call
@@ -594,7 +596,7 @@ static void* worker(void* args) {
                 log_event("INFO", "[%d] CLOSE: %s => %c", thread_id, pathname, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
-            case REMOVE: // ! removeFile: REMOVE <str:pathname>
+            case REMOVE:  // ! removeFile: REMOVE <str:pathname>
                 // Parso il pathname dalla richiesta
                 token = strtok_r(NULL, " ", &strtok_status);
                 memset(pathname, 0, MESSAGE_LENGTH);
@@ -617,7 +619,7 @@ static void* worker(void* args) {
 
                 log_event("INFO", "[%d] REMOVE: %s %zu bytes => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
-                
+
             case DISCONNECT:  // ! closeConnection
                 // Un client ha richiesto la chiusura della connessione
                 // Lo comunico al thread dispatcher tramite la pipe
@@ -648,10 +650,9 @@ static void* worker(void* args) {
 }
 
 int main(int argc, char* argv[]) {
-
     // Stampo il banner FSS
     printf(FSS_SERVER_BANNER);
-    
+
     // ! Parametri in ingresso:
     //  * 1. <config_path>: path al file di configurazione
     //    Se non viene specificato, si assume che il file di configurazione
@@ -1050,15 +1051,14 @@ int main(int argc, char* argv[]) {
         "+ At shutdown, these files are inside the storage:\n",
         start_time, shutdown_time,
         storage->max_files_reached, human_readable_max_space_used,
-        storage->rp_algorithm_counter
-    );
+        storage->rp_algorithm_counter);
 
     // Libero subito la memoria
     free(human_readable_max_space_used);
 
     // Visualizzo i file presenti nello storage al momento dell'arresto
     storage_print(storage);
-    
+
     // Mi assicuro che tutti i threads spawnati siano terminati
     // Prima il signal handler thread, che è il primo a terminare
     pthread_join(thread_signal_handler, NULL);
@@ -1087,7 +1087,7 @@ int main(int argc, char* argv[]) {
 
     // Elimino il socket file
     unlink(SOCKET_PATH);
-    
+
     // Log di chiusura
     log_event("INFO", "Server shutdown");
 

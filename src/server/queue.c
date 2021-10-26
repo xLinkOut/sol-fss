@@ -10,7 +10,7 @@
 queue_t* queue_init() {
     // Alloco memoria per la coda
     queue_t* queue = malloc(sizeof(queue_t));
-    if (!queue){
+    if (!queue) {
         //perror("Error: failed to allocate memory for queue");
         return NULL;
     }

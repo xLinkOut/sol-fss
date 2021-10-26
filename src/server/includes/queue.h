@@ -7,17 +7,17 @@
 
 // * Struttura dati di un file descriptor pronto in coda
 typedef struct Node {
-    int fd_ready; // Indice di un descrittore pronto, oppure segnale di terminazione
+    int fd_ready;  // Indice di un descrittore pronto, oppure segnale di terminazione
     struct Node* next;
 } node_t;
 
 // * Struttura dati della coda
 typedef struct Queue {
-    node_t* head; // Testa
-    node_t* tail; // Coda
-    unsigned long length; // Tasks in coda
-    pthread_mutex_t mutex; // Accesso esclusivo
-    pthread_cond_t empty; // Coda vuota
+    node_t* head;           // Testa
+    node_t* tail;           // Coda
+    unsigned long length;   // Tasks in coda
+    pthread_mutex_t mutex;  // Accesso esclusivo
+    pthread_cond_t empty;   // Coda vuota
 } queue_t;
 
 // * Inizializza la coda e ritorna un puntatore ad essa

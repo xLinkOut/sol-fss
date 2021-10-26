@@ -17,7 +17,9 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <storage.h>
 #include <string.h>
+#include <time.h>
 #include <utils.h>
 
 #define BITS_IN_int (sizeof(int) * CHAR_BIT)
@@ -76,7 +78,7 @@ icl_hash_create(int nbuckets, unsigned int (*hash_function)(void *), int (*hash_
 
     ht->nentries = 0;
     ht->buckets = (icl_entry_t **)malloc(nbuckets * sizeof(icl_entry_t *));
-    if (!ht->buckets){
+    if (!ht->buckets) {
         free(ht);
         return NULL;
     }
@@ -285,10 +287,10 @@ int icl_hash_destroy(icl_hash_t *ht, void (*free_key)(void *), void (*free_data)
  */
 
 int icl_hash_dump(FILE *stream, icl_hash_t *ht) {
-    icl_entry_t *bucket, *curr;
-    int i;
-
     if (!ht) return -1;
+    
+    int i;
+    icl_entry_t *bucket, *curr;
 
     for (i = 0; i < ht->nbuckets; i++) {
         bucket = ht->buckets[i];
@@ -302,16 +304,11 @@ int icl_hash_dump(FILE *stream, icl_hash_t *ht) {
     return 0;
 }
 
-#include <time.h>
-#include <limits.h>
-#include <storage.h>
+void *icl_hash_get_victim(icl_hash_t *ht, replacement_policy_t rp, const char *pathname) {
+    if (!ht) return NULL;  // todo errno
 
-void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* pathname){ 
-    if (!ht) return NULL; // todo errno
-    
     icl_entry_t *bucket, *curr;
-
-    storage_file_t* victim_name = NULL;
+    storage_file_t *victim_name = NULL;
     time_t victim_creation_time = LONG_MAX;
     time_t victim_last_use_time = LONG_MAX;
     unsigned int victim_frequency = UINT_MAX;
@@ -319,20 +316,20 @@ void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* p
     for (int i = 0; i < ht->nbuckets; i++) {
         bucket = ht->buckets[i];
         for (curr = bucket; curr != NULL;) {
-            if (curr->key){
+            if (curr->key) {
                 // Se incontro proprio il file che sto tentando di scrivere, lo salto
-                if(strcmp(((storage_file_t*) (curr->data))->name, pathname) == 0){curr = curr->next; continue;}
+                if (strcmp(((storage_file_t *)(curr->data))->name, pathname) == 0) {
+                    curr = curr->next;
+                    continue;
+                }
 
                 // Logica dell'algoritmo di rimpiazzo, in base alla politica scelta in fase di configurazione
-                storage_file_t* current_file = (storage_file_t*) curr->data;
-                
-                // TODO: controllare che i file non siano aperti in lettura/scrittura da altri client
-                
-                switch(rp){
+                storage_file_t *current_file = (storage_file_t *)curr->data;
+                switch (rp) {
                     case FIFO:
                         // Viene selezionato il file presente nello storage da più tempo,
                         //  ovvero quello con creation time più basso
-                        if(current_file->creation_time < victim_creation_time){
+                        if (current_file->creation_time < victim_creation_time) {
                             victim_creation_time = current_file->creation_time;
                             victim_name = current_file;
                         }
@@ -340,7 +337,7 @@ void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* p
                     case LRU:
                         // Viene selezionato il file non utilizzato da più tempo,
                         //  ovvero quello con last use time più basso
-                        if(current_file->last_use_time < victim_last_use_time){
+                        if (current_file->last_use_time < victim_last_use_time) {
                             victim_last_use_time = current_file->last_use_time;
                             victim_name = current_file;
                         }
@@ -348,7 +345,7 @@ void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* p
                     case LFU:
                         // Viene selezionato il file utilizzato meno frequentemente,
                         //  ovvero quello con frequency più basso
-                        if(current_file->frequency < victim_frequency){
+                        if (current_file->frequency < victim_frequency) {
                             victim_frequency = current_file->frequency;
                             victim_name = current_file;
                         }
@@ -362,23 +359,23 @@ void* icl_hash_get_victim(icl_hash_t* ht, replacement_policy_t rp, const char* p
     return victim_name;
 }
 
-int icl_hash_get_n_files(icl_hash_t* ht, int N, void*** files){ 
-    if (!ht) return -1; // todo errno
-    
-    storage_file_t*** read_files = (storage_file_t***) files;
-    icl_entry_t *bucket, *curr;
+int icl_hash_get_n_files(icl_hash_t *ht, int N, void ***files) {
+    if (!ht) return -1;
+
     int index = 0;
-    storage_file_t* current_file = NULL;
+    icl_entry_t *bucket, *curr;
+    storage_file_t *current_file = NULL;
+    storage_file_t ***read_files = (storage_file_t ***)files;
+    
     for (int i = 0; i < ht->nbuckets && index < N; i++) {
         bucket = ht->buckets[i];
         for (curr = bucket; curr != NULL && index < N; curr = curr->next) {
-            if (curr->key){
+            if (curr->key) {
                 // Prendo il file corrente
-                current_file = (storage_file_t*) curr->data;
-                //printf("%s %p %zu\n", current_file->name, current_file->contents, current_file->size);
+                current_file = (storage_file_t *)curr->data;
                 // Salto i file vuoti
-                if(current_file->size == 0) continue;
-                storage_file_t* new_file = storage_file_create(current_file->name, current_file->contents, current_file->size);
+                if (current_file->size == 0) continue;
+                storage_file_t *new_file = storage_file_create(current_file->name, current_file->contents, current_file->size);
                 (*read_files)[index] = new_file;
                 index++;
             }
@@ -388,21 +385,21 @@ int icl_hash_get_n_files(icl_hash_t* ht, int N, void*** files){
     return index;
 }
 
-void icl_hash_print(icl_hash_t* ht){
+void icl_hash_print(icl_hash_t *ht) {
     if (!ht) return;
-    
+
     int i;
     int counter = 1;
     icl_entry_t *bucket, *curr;
-    storage_file_t* file = NULL;
+    storage_file_t *file = NULL;
 
     for (i = 0; i < ht->nbuckets; i++) {
         bucket = ht->buckets[i];
         for (curr = bucket; curr != NULL; curr = curr->next) {
-            if (curr->key){
-                file = (storage_file_t*) curr->data;
-                char* human_readable_size = calculate_size(file->size);
-                fprintf(stdout, "[%d] (%s) %s\n", counter++, human_readable_size , file->name);
+            if (curr->key) {
+                file = (storage_file_t *)curr->data;
+                char *human_readable_size = calculate_size(file->size);
+                fprintf(stdout, "[%d] (%s) %s\n", counter++, human_readable_size, file->name);
                 free(human_readable_size);
             }
         }

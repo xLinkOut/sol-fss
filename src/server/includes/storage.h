@@ -10,11 +10,9 @@
 
 // * Struttura dati dello storage
 typedef struct Storage {
-    icl_hash_t* files;  // Hashmap di StorageFile
-
+    icl_hash_t* files;                        // Hashmap di StorageFile
     replacement_policy_t replacement_policy;  // Politica di rimpiazzo scelta
-
-    rwlock_t* rwlock;  // Global Storage read-write-lock
+    rwlock_t* rwlock;                         // Global Storage read-write-lock
 
     size_t number_of_files;  // Numero di files attualmente memorizzati, parte da 0 fino a <max_files>
     size_t max_files;        // Numero di files massimo memorizzabile, pari a STORAGE_MAX_FILES
@@ -82,7 +80,8 @@ void storage_file_destroy(void* file);
 
 // ! APIs
 // * Crea e/o apre il file <pathname> in lettura ed eventualmente in scrittura, in accordo a <flags>
-int storage_open_file(storage_t* storage, const char* pathname, int flags, int* victims_no, storage_file_t*** victims, int client);
+int storage_open_file(storage_t* storage, const char* pathname, int flags,
+                      int* victims_no, storage_file_t*** victims, int client);
 
 // * Legge il file <pathname> dallo storage, copiando il suo contenuto in <contents>
 int storage_read_file(storage_t* storage, const char* pathname, void** contents, size_t* size, int client);
@@ -91,10 +90,12 @@ int storage_read_file(storage_t* storage, const char* pathname, void** contents,
 int storage_read_n_files(storage_t* storage, int N, storage_file_t*** files_read, int client);
 
 // * Scrive nello storage il file <pathname> ed il suo contenuto <contents>
-int storage_write_file(storage_t* storage, const char* pathname, void* contents, size_t size, int* victims_no, storage_file_t*** victims, size_t* old_size, int client);
+int storage_write_file(storage_t* storage, const char* pathname, void* contents, size_t size,
+                       int* victims_no, storage_file_t*** victims, size_t* old_size, int client);
 
 // * Aggiunge <contents>, di dimensione <size>, in fondo al file <pathname>
-int storage_append_to_file(storage_t* storage, const char* pathname, const void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client);
+int storage_append_to_file(storage_t* storage, const char* pathname, const void* contents, size_t size,
+                           int* victims_no, storage_file_t*** victims, int client);
 
 // * Imposta il lock in scrittura sul file <pathname> per <client>
 int storage_lock_file(storage_t* storage, const char* pathname, int client);
