@@ -615,7 +615,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "[%d] REMOVE: %s %zu => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
+                log_event("INFO", "[%d] REMOVE: %s %zu bytes => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
                 
             case DISCONNECT:  // ! closeConnection
