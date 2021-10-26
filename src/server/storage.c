@@ -432,7 +432,7 @@ int storage_read_n_files(storage_t* storage, int N, storage_file_t*** read_files
     return files_no;
 }
 
-int storage_write_file(storage_t* storage, const char* pathname, void* contents, size_t size, int* victims_no, storage_file_t*** victims, int client){
+int storage_write_file(storage_t* storage, const char* pathname, void* contents, size_t size, int* victims_no, storage_file_t*** victims, size_t* old_size, int client){
     // Controllo la validità degli argomenti
     if (!storage || !pathname || !contents || size == 0 || !victims_no || !victims) {
         errno = EINVAL;
@@ -518,7 +518,7 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
 
     // Rimuovo le tracce di un eventuale file precedentemente scritto
     if(file->contents) free(file->contents);
-    size_t old_size = file->size; // Usata in fondo per aggiornare le informazioni dello storage
+    *old_size = file->size; // Usata in fondo per aggiornare le informazioni dello storage
     
     // Aggiorno il contenuto del file
     file->contents = contents;
@@ -538,7 +538,7 @@ int storage_write_file(storage_t* storage, const char* pathname, void* contents,
     // Aggiorno le informazioni dello storage
     // Sottraggo alla capacità dello storage quella occupata dal file che eventualmente ho sovrascritto,
     // quindi sommo la dimensione del nuovo file caricato
-    storage->capacity = (storage->capacity - old_size) + size;
+    storage->capacity = (storage->capacity - (*old_size)) + size;
     storage->max_capacity_reached = MAX(storage->max_capacity_reached, storage->capacity);
     if(*victims_no > 0) storage->rp_algorithm_counter++;
 

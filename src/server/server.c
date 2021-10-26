@@ -127,6 +127,8 @@ static void* worker(void* args) {
     
     // openFile
     int flags = 0;
+    // writeFile
+    size_t old_size = 0;
     // readFile, writeFile, appendToFile, removeFile
     size_t file_size = 0;
     void* contents = NULL;
@@ -379,9 +381,10 @@ static void* worker(void* args) {
                 }
                 
                 // Scrivo il contenuto del file all'intero dello storage
+                old_size = 0; // Utilizzata per loggare la dimensione del file eventualmente sovrascritto
                 victims_no = 0;
                 victims = NULL;
-                api_exit_code = storage_write_file(worker_args->storage, pathname, contents, file_size, &victims_no, &victims, fd_ready);
+                api_exit_code = storage_write_file(worker_args->storage, pathname, contents, file_size, &victims_no, &victims, &old_size, fd_ready);
 
                 // Invio al client eventuali file espulsi
                 memset(response, 0, MESSAGE_LENGTH);
@@ -428,7 +431,7 @@ static void* worker(void* args) {
                     break;
                 }
 
-                log_event("INFO", "[%d] WRITE: %s %zu bytes => %c", thread_id, pathname, file_size, api_exit_code == 0 ? 'O' : 'X');
+                log_event("INFO", "[%d] WRITE: %s %zu bytes (overwritten %zu bytes) => %c", thread_id, pathname, file_size, old_size, api_exit_code == 0 ? 'O' : 'X');
                 break;
 
             case APPEND: // ! appendToFile: APPEND <str:pathname> <int:size>
