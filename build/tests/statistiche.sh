@@ -121,6 +121,10 @@ while IFS= read -r line; do
                 # Considero solo operazioni andate a buon fine
                 if [[ ${result[${#result[@]}-1]} == "O" ]] ; then
                     ((STORAGE_FILE-=1)) # Decremento il numero di file nello storage
+                    if [[ ${bytes[${#bytes[@]}-4]} =~ $BYTES_RE ]] ; then
+                        # Decremento la dimensione dello storage
+                        ((STORAGE_SIZE-=${bytes[${#bytes[@]}-4]}))
+                    fi
                 fi
             ;;
         
